@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout — halfhata</title>
+<link rel="icon" href="assets/img/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="page">
+  <div class="topbar"><div class="container">
+    <a class="brand" href="index.html"><img src="assets/img/logo.jpeg" alt=""> halfhata</a>
+    <div class="secure" id="secure"></div>
+  </div></div>
+
+  <div class="container">
+    <!-- stepper -->
+    <div class="stepper">
+      <div class="step active" id="st1"><span class="num">1</span><span>Login / Account</span></div>
+      <div class="step-line"></div>
+      <div class="step" id="st2"><span class="num">2</span><span>Shipping Details</span></div>
+      <div class="step-line"></div>
+      <div class="step" id="st3"><span class="num">3</span><span>Payment</span></div>
+      <div class="step-line"></div>
+      <div class="step" id="st4"><span class="num">4</span><span>Review & Place Order</span></div>
+    </div>
+
+    <div class="co-grid">
+      <!-- LEFT -->
+      <div>
+        <!-- login -->
+        <div class="panel">
+          <h3>Login or Create Account</h3><div class="sub">Choose an option to continue</div>
+          <div class="oauth">
+            <button class="btn" id="btnGoogle"></button>
+            <button class="btn" id="btnCreate"></button>
+          </div>
+          <div id="loggedIn" class="notice hide" style="margin-top:14px"></div>
+        </div>
+
+        <!-- shipping -->
+        <div class="panel">
+          <h3>Shipping Information</h3><div class="sub">Please provide accurate details for smooth delivery.</div>
+          <div class="row2">
+            <div class="field"><label>Full Name <span class="req">*</span></label><input id="f_name" placeholder="Your full name"><div class="msg">Name is required</div></div>
+            <div class="field"><label>Phone Number <span class="req">*</span></label><input id="f_phone" placeholder="01XXXXXXXXX"><div class="msg">Valid 11-digit phone required</div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>District <span class="req">*</span></label><select id="f_district"></select><div class="msg">Select a district</div></div>
+            <div class="field"><label>City / Area <span class="req">*</span></label><input id="f_city" placeholder="Area / thana"><div class="msg">City is required</div></div>
+          </div>
+          <div class="field"><label>Full Address <span class="req">*</span></label><input id="f_address" placeholder="House, road, area"><div class="msg">Address is required</div></div>
+          <div class="notice"><span id="shipNote"></span></div>
+        </div>
+
+        <!-- payment -->
+        <div class="panel">
+          <h3>Payment Options</h3><div class="sub">Choose how you want to pay</div>
+
+          <div class="payopt sel" id="opt_cod" data-opt="cod">
+            <div class="h">
+              <input type="radio" name="pay" value="cod" checked>
+              <div style="flex:1">
+                <b>Cash on Delivery (COD) <span class="pill pill-green" style="font-weight:600">Minimum ৳120 required</span></b>
+                <small>Pay minimum ৳120 now to confirm your order. Pay the rest to the delivery man.</small>
+              </div>
+            </div>
+            <div class="detail">
+              <div>
+                <div class="field" style="margin-bottom:6px"><label>Payment Amount (Minimum ৳120)</label>
+                  <input id="f_amount" type="number" min="120" value="120"></div>
+                <small style="color:var(--muted)" id="minhint">Minimum required: ৳120</small>
+                <div class="field" style="margin-top:14px"><label>Transaction ID <span class="req">*</span></label>
+                  <input id="f_txn" placeholder="Nagad / bKash transaction ID"><div class="msg">Transaction ID is required</div></div>
+                <small style="color:var(--muted)">Enter your Nagad / bKash transaction ID</small>
+              </div>
+              <div>
+                <label style="font-size:13px;font-weight:500">Send payment to</label>
+                <div id="payChips" style="display:flex;gap:8px;margin:8px 0 4px"></div>
+                <div style="font-size:13px;margin-bottom:16px">Our Number: <b id="ourNumber"></b></div>
+                <label style="font-size:13px;font-weight:500">Upload Payment Screenshot</label>
+                <label class="upload" style="margin-top:8px"><input type="file" id="f_shot" accept="image/*" hidden><span id="uploadLabel">Upload Screenshot</span></label>
+                <small style="color:var(--muted);display:block;margin-top:6px">JPG, PNG up to 5MB (optional)</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="payopt" id="opt_full" data-opt="full">
+            <div class="h">
+              <input type="radio" name="pay" value="full">
+              <div style="flex:1"><b>Pay Full Amount Now</b><small>Pay the full amount now and confirm your order.</small></div>
+              <div style="font-weight:700;white-space:nowrap">Total: <span id="fullTotal"></span></div>
+            </div>
+          </div>
+
+          <button class="btn btn-dark btn-block btn-lg" id="placeBtn" style="margin-top:6px">Proceed & Place Order <span id="placeArrow"></span></button>
+          <div style="text-align:center;color:var(--muted);font-size:12px;margin-top:10px" id="chargedNote"></div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div>
+        <div class="panel summary">
+          <h3>Order Summary</h3><div class="sub" id="sumCount">0 items</div>
+          <div class="items" id="sumItems"></div>
+          <div class="sum-line"><span>Subtotal</span><span id="sumSub"></span></div>
+          <div class="sum-line"><span>Delivery Charge</span><span id="sumDel"></span></div>
+          <div class="sum-total"><span>Total Amount</span><span id="sumTotal"></span></div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:14px">Send payment to</h3>
+          <div class="paychan" id="channels"></div>
+          <div style="display:flex;gap:8px;color:var(--muted);font-size:12px;margin-top:10px">
+            <span id="afterNote">After sending payment, enter your Transaction ID and upload the screenshot to confirm.</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom:14px">Why choose halfhata?</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="whyGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer"><div class="container">
+    <a class="brand" href="index.html" style="color:#fff"><img src="assets/img/logo.jpeg" alt=""> halfhata</a>
+    <div class="pay" id="footerChannels"></div>
+    <div class="copyright">© 2025 halfhata. All rights reserved.</div>
+  </div></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/checkout.js"></script>
+</body>
+</html>

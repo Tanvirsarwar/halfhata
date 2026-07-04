@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track Order — halfhata</title>
+<link rel="icon" href="assets/img/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="page">
+  <div class="topbar"><div class="container">
+    <a class="brand" href="index.html"><img src="assets/img/logo.jpeg" alt=""> halfhata</a>
+    <a class="btn btn-light" href="index.html">Home</a>
+  </div></div>
+
+  <div class="track-wrap">
+    <h1 style="font-size:26px;letter-spacing:-.02em">Track your order</h1>
+    <p style="color:var(--muted);margin-top:6px">Enter your Order ID to see live status.</p>
+    <div class="track-search">
+      <input class="field" id="tid" placeholder="Your Order ID" style="padding:12px 14px;border:1px solid var(--line);border-radius:10px">
+      <button class="btn btn-dark" id="go">Track</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/track.js"></script>
+</body>
+</html>
