@@ -5,8 +5,7 @@
       (Application type: Web). Add your site URL to "Authorized JavaScript origins".
    2. Paste the Client ID below. That's it — the real Google account picker turns on.
    Until then, the button does a smooth one-click demo sign-in.                       */
-const GOOGLE_CLIENT_ID = ''; // e.g. '1234567890-abcd.apps.googleusercontent.com'
-
+const GOOGLE_CLIENT_ID = '51428108901-qqmif8fnc63350pnduo2alffup55k330.apps.googleusercontent.com';
 function renderAuth(mountId, onSuccess) {
   const el = document.getElementById(mountId);
   el.classList.remove('hide');
