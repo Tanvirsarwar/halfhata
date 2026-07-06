@@ -58,7 +58,6 @@ function renderChrome() {
   document.getElementById('va2').innerHTML = ic('arrow', 16);
   document.getElementById('obCartIc').innerHTML = ic('cart', 22);
   document.getElementById('obArrow').innerHTML = ic('arrow', 18);
-  document.getElementById('heroTee').innerHTML = garment('hoodie', '#17171a', '58%');
 
   document.getElementById('footerChannels').innerHTML = `
     <a class="it" href="mailto:${HH.email}"><span class="ficon">${ic('mail',15)}</span><div><b>Email</b><small>${HH.email}</small></div></a>
