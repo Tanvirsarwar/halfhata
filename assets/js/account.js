@@ -10,7 +10,7 @@ function render() {
       <p style="color:var(--muted);margin:8px 0 20px;text-align:center">See your orders, delivery status and notifications.</p>
       <div id="authMount"></div>
     </div>`;
-    renderAuth('authMount', () => render());
+    renderAuth('authMount', () => { location.href = 'index.html'; });
     return;
   }
   const orders = Store.userOrders(); const notifs = Store.userNotifications();
