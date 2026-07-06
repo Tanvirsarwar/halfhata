@@ -24,10 +24,8 @@ const emptyState = msg => `<div style="grid-column:1/-1;text-align:center;paddin
 function renderGrids() {
   const all = Store.getProducts().filter(p => p.active !== false && p.kind !== 'jersey');
 
-  // New Arrivals: badge "New", else the 5 most recent
-  let news = all.filter(p => p.badge === 'New');
-  if (!news.length) news = all.slice(0, 5);
-  document.getElementById('gridNew').innerHTML = news.length ? news.slice(0, 5).map(card).join('')
+  // New Arrivals: show all products (newest first)
+  document.getElementById('gridNew').innerHTML = all.length ? all.map(card).join('')
     : emptyState('No products yet. Add t-shirts from the admin dashboard → Products → Add Product.');
 
   // Best Sellers
@@ -35,17 +33,6 @@ function renderGrids() {
   const bestSection = document.getElementById('best');
   if (best.length) { bestSection.style.display = ''; document.getElementById('gridBest').innerHTML = best.slice(0, 5).map(card).join(''); }
   else if (bestSection) bestSection.style.display = 'none';
-
-  // Collections + category chips
-  const cats = Store.getCategories().filter(c => all.some(p => p.category === c));
-  const chips = document.getElementById('catChips');
-  if (chips) {
-    chips.innerHTML = ['all', ...cats].map(c =>
-      `<button class="chip ${activeCat===c?'on':''}" data-cat="${esc(c)}">${c==='all'?'All':esc(c)}</button>`).join('');
-  }
-  const filtered = activeCat === 'all' ? all : all.filter(p => p.category === activeCat);
-  document.getElementById('gridAll').innerHTML = filtered.length ? filtered.map(card).join('')
-    : emptyState('No products in this collection yet.');
 }
 
 function renderChrome() {
