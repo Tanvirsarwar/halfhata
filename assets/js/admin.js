@@ -1,5 +1,5 @@
 /* ============ Admin (multi-view dashboard) ============ */
-Store.seed();
+//Store.seed();
 
 const statusPill = { 'Pending':'pill-amber','On Courier':'pill-blue','Delivered':'pill-green','Cancelled':'pill-red' };
 const statusColor = { 'Pending':'#b7791f','On Courier':'#2563eb','Delivered':'#16a34a','Cancelled':'#dc2626' };
@@ -234,17 +234,30 @@ function download(name, text) {
 
 /* ---------- PRODUCTS ---------- */
 function wireProducts() {
-  document.getElementById('prodSearchIc').innerHTML = ic('search',16);
-  document.getElementById('addProdBtn').innerHTML = ic('plus',16) + ' Add Product';
-  document.getElementById('manageCatsBtn').innerHTML = ic('tag',16) + ' Categories';
-  document.getElementById('prodSearch').addEventListener('input', renderProducts);
-  document.getElementById('addProdBtn').onclick = () => openProductForm(null);
-  document.getElementById('manageCatsBtn').onclick = openCategoryManager;
-  document.getElementById('prodBody').addEventListener('click', async e => {
-    const ed = e.target.closest('[data-edit-prod]'); if (ed) openProductForm(ed.dataset.editProd);
-    const dl = e.target.closest('[data-del-prod]');
-    if (dl) { const p = Store.getProducts().find(x => x.id === dl.dataset.delProd);
-      if (confirm(`Delete "${p?.name}"? This can't be undone.`)) { if (window.SB) await SB.deleteProduct(dl.dataset.delProd); else Store.deleteProduct(dl.dataset.delProd); toast('Product deleted'); renderProducts(); } }
+  document.getElementById('tblProdSearch').addEventListener('input', e => { state.search = e.target.value; renderProducts(); });
+  document.getElementById('addProdBtn').onclick = () => openProductDrawer();
+  document.getElementById('catMgrBtn').onclick = openCategoryManager;
+  document.addEventListener('click', e => {
+    const edit = e.target.closest('[data-edit-prod]');
+    if (edit) {
+      const pId = edit.dataset.editProd;
+      const cachedProds = JSON.parse(localStorage.getItem('hh_products') || '[]');
+      const target = cachedProds.find(p => p.id === pId);
+      openProductDrawer(target);
+    }
+    const del = e.target.closest('[data-del-prod]');
+    if (del && confirm('Delete this product permanently from the live database?')) {
+      if (window.SB && SB.ready) {
+        SB.deleteProduct(del.dataset.delProd).then(() => {
+          toast('Deleted from database universally');
+          renderProducts();
+        });
+      } else {
+        Store.deleteProduct(del.dataset.delProd);
+        toast('Deleted locally');
+        renderProducts();
+      }
+    }
   });
 }
 function renderProducts() {
