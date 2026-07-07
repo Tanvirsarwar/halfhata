@@ -75,7 +75,46 @@ window.SB = {
     const { error } = await sb.from('categories').upsert({ name });
     if (error) console.error('add category', error);
     await this.loadCatalog();
-  },
+  }, 
+   
+ async createCloudOrder(orderPayload, itemsArray) {
+    if (!sb) return { ok: false, error: 'Cloud client uninitialized' };
+    try {
+      // Step A: Insert the master order row
+      const { data: orderData, error: orderError } = await sb
+        .from('orders')
+        .insert([orderPayload])
+        .select();
+
+      if (orderError) throw orderError;
+      if (!orderData || orderData.length === 0) throw new Error('Database failed to return an order reference ID');
+      
+      const newOrderId = orderData[0].id;
+
+      // Step B: Map your individual shopping cart items to this fresh Order ID
+      const structuredItems = itemsArray.map(item => ({
+        order_id: newOrderId,
+        product_id: item.id,
+        name: item.name,
+        price: Number(item.price) || 0,
+        size: item.size || 'M',
+        color: item.color || null,
+        qty: Number(item.qty) || 1
+      }));
+
+      // Step C: Bulk save the item rows to order_items
+      const { error: itemsError } = await sb
+        .from('order_items')
+        .insert(structuredItems);
+
+      if (itemsError) throw itemsError;
+
+      return { ok: true, id: newOrderId };
+    } catch (err) {
+      console.error('Supabase Transaction Error:', err);
+      return { ok: false, error: err.message || err };
+    }
+  }  
 
   async removeCategory(name) {
     if (!sb) return;
