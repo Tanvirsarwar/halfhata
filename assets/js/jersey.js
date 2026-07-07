@@ -96,4 +96,5 @@ document.getElementById('navBell').onclick = e => { e.stopPropagation(); documen
 document.getElementById('markRead').onclick = () => { Store.markAllRead(); renderNotifs(); };
 document.addEventListener('click', e => { if (!e.target.closest('.notif-wrap')) document.getElementById('notifMenu').classList.remove('open'); });
 
-renderChrome(); renderJerseys(); refreshCart(); renderNotifs();
+renderChrome(); refreshCart(); renderNotifs();
+(async () => { if (window.SB) await SB.loadCatalog(); renderJerseys(); })();

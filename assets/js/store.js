@@ -14,12 +14,22 @@ const Store = (() => {
                             .map(l => ({ ...l, lineTotal: l.product.price * l.qty }));
   const cartSubtotal = () => cartLines().reduce((s, l) => s + l.lineTotal, 0);
 
-  function addToCart(id, { size = 'M', color = null } = {}) {
+  function addToCart(id, { size = null, color = null } = {}) {
+    const p = productById(id); if (!p) return cartCount();
+    size = size || (p.sizes && p.sizes[0]) || 'M';
     const cart = getCart();
     const key = i => i.id === id && i.size === size;
     const ex = cart.find(key);
-    if (ex) ex.qty++; else cart.push({ id, qty: 1, size, color: color || productById(id).color });
+    if (ex) ex.qty++; else cart.push({ id, qty: 1, size, color: color || p.color });
     write(K.cart, cart); return cartCount();
+  }
+  function setSize(id, oldSize, newSize) {
+    const cart = getCart();
+    const line = cart.find(i => i.id === id && i.size === oldSize); if (!line) return;
+    const existing = cart.find(i => i.id === id && i.size === newSize && i !== line);
+    if (existing) { existing.qty += line.qty; cart.splice(cart.indexOf(line), 1); }
+    else line.size = newSize;
+    write(K.cart, cart);
   }
   function setQty(id, size, qty) {
     let cart = getCart();
@@ -33,6 +43,30 @@ const Store = (() => {
   const getUser = () => read(K.user, null);
   const setUser = u => write(K.user, u);
   const logout = () => localStorage.removeItem(K.user);
+
+  /* ---- customer accounts (email + password, hashed) ---- */
+  const getUsers = () => read('hh_users', {});
+  async function registerUser(email, password) {
+    email = (email || '').trim().toLowerCase();
+    const users = getUsers();
+    if (users[email]) return { ok:false, error:'An account with this email already exists — please log in.' };
+    users[email] = { email, passHash: await sha256(password), createdAt: new Date().toISOString() };
+    write('hh_users', users);
+    setUser({ ...(getUser() || {}), email, provider:'email' });
+    return { ok:true };
+  }
+  async function loginUser(email, password) {
+    email = (email || '').trim().toLowerCase();
+    const u = getUsers()[email];
+    if (!u) return { ok:false, error:'No account found with this email.' };
+    if (await sha256(password) !== u.passHash) return { ok:false, error:'Incorrect password.' };
+    setUser({ ...(getUser() || {}), email, name:u.name || '', provider:'email' });
+    return { ok:true };
+  }
+  function loginGoogle(email) {
+    setUser({ ...(getUser() || {}), email:(email || '').trim().toLowerCase(), provider:'google' });
+    return { ok:true };
+  }
 
   /* ---- orders ---- */
   const getOrders = () => read(K.orders, []);
@@ -191,16 +225,16 @@ const Store = (() => {
     }
     return null;
   }
-  const isAdmin = () => sessionStorage.getItem('hh_admin') === '1';
+  const isAdmin = () => localStorage.getItem('hh_admin') === '1';
   async function adminLogin(pw) {
     const h = await sha256(pw);
-    if (h === ADMIN_HASH) { sessionStorage.setItem('hh_admin', '1'); return true; }
+    if (h === ADMIN_HASH) { localStorage.setItem('hh_admin', '1'); return true; }
     return false;
   }
-  function adminLogout() { sessionStorage.removeItem('hh_admin'); }
+  function adminLogout() { localStorage.removeItem('hh_admin'); }
   /* wipe EVERYTHING for a clean fresh launch */
   function resetAllData() {
-    ['hh_cart','hh_orders','hh_user','hh_seq','hh_products','hh_categories','hh_notif_read'].forEach(k => localStorage.removeItem(k));
+    ['hh_cart','hh_orders','hh_user','hh_seq','hh_products','hh_categories','hh_notif_read','hh_users'].forEach(k => localStorage.removeItem(k));
   }
 
   /* ---- PRODUCTS + CATEGORIES (admin-managed, start empty) ---- */
@@ -244,8 +278,9 @@ const Store = (() => {
     localStorage.setItem('hh_version', DATA_VERSION);
   }
 
-  return { getCart, cartCount, cartLines, cartSubtotal, addToCart, setQty, removeLine, clearCart,
-           getUser, setUser, logout, getOrders, getOrder, placeOrder, updateOrder, assignCourier, setStatus, seed,
+  return { getCart, cartCount, cartLines, cartSubtotal, addToCart, setQty, setSize, removeLine, clearCart,
+           getUser, setUser, logout, registerUser, loginUser, loginGoogle,
+           getOrders, getOrder, placeOrder, updateOrder, assignCourier, setStatus, seed,
            userOrders, userNotifications, unreadCount, markAllRead,
            analytics, revenueSeries, statusSplit, paymentSplit, topProducts, customers, recentActivity,
            isAdmin, adminLogin, adminLogout, resetAllData,

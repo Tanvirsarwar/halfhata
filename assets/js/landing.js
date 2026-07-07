@@ -119,4 +119,5 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.notif-wrap')) document.getElementById('notifMenu').classList.remove('open');
 });
 
-renderChrome(); renderGrids(); refreshCart(); renderNotifs();
+renderChrome(); refreshCart(); renderNotifs();
+(async () => { if (window.SB) await SB.loadCatalog(); renderGrids(); })();

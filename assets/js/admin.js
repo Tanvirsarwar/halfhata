@@ -27,7 +27,8 @@ if (Store.isAdmin()) showApp();
 let state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sortKey:'createdAt', sortDir:-1, page:1, per:10, view:'dashboard' };
 
 /* ---------- CHROME + NAV ---------- */
-function boot() {
+async function boot() {
+  if (window.SB) await SB.loadCatalog();
   const nav = [
     ['dashboard','Dashboard','dashboard'],['orders','Orders','orders'],['box','Products','products'],
     ['users','Customers','customers'],['tag','Coupons','coupons'],['chart','Reports','dashboard'],
@@ -239,11 +240,11 @@ function wireProducts() {
   document.getElementById('prodSearch').addEventListener('input', renderProducts);
   document.getElementById('addProdBtn').onclick = () => openProductForm(null);
   document.getElementById('manageCatsBtn').onclick = openCategoryManager;
-  document.getElementById('prodBody').addEventListener('click', e => {
+  document.getElementById('prodBody').addEventListener('click', async e => {
     const ed = e.target.closest('[data-edit-prod]'); if (ed) openProductForm(ed.dataset.editProd);
     const dl = e.target.closest('[data-del-prod]');
     if (dl) { const p = Store.getProducts().find(x => x.id === dl.dataset.delProd);
-      if (confirm(`Delete "${p?.name}"? This can't be undone.`)) { Store.deleteProduct(dl.dataset.delProd); toast('Product deleted'); renderProducts(); } }
+      if (confirm(`Delete "${p?.name}"? This can't be undone.`)) { if (window.SB) await SB.deleteProduct(dl.dataset.delProd); else Store.deleteProduct(dl.dataset.delProd); toast('Product deleted'); renderProducts(); } }
   });
 }
 function renderProducts() {
@@ -339,8 +340,9 @@ function syncDesignInputs() {
     designRows[i].price = row.querySelector('.d-price').value;
   });
 }
-function saveProduct(editing) {
+async function saveProduct(editing) {
   syncDesignInputs();
+  toast('Saving…');
   const category = (document.getElementById('pCat').value || '').trim();
   const badge = document.getElementById('pBadge').value || null;
   const kind = (document.querySelector('input[name=pKind]:checked') || {}).value || 'tshirt';
@@ -349,13 +351,15 @@ function saveProduct(editing) {
   if (!category) return toast('Enter a category');
   if (!valid.length) return toast('Add a design name and price');
   if (!valid.every(d => d.image) && !editing) { if (!confirm('Some designs have no photo. Publish anyway?')) return; }
-  Store.addCategory(category);
+  if (window.SB) await SB.addCategory(category); else Store.addCategory(category);
   if (editing) {
     const d = valid[0];
-    Store.updateProduct(editing.id, { name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind });
+    const patch = { name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind };
+    if (window.SB) await SB.updateProduct(editing.id, patch); else Store.updateProduct(editing.id, patch);
     toast('Product updated');
   } else {
-    valid.forEach(d => Store.addProduct({ name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind }));
+    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind }));
+    if (window.SB) await SB.createProducts(list); else list.forEach(x => Store.addProduct(x));
     toast(`${valid.length} ${kind === 'jersey' ? 'jersey' : 'product'}(s) published`);
   }
   closeDrawer(); renderProducts();
@@ -375,8 +379,8 @@ function openCategoryManager() {
             <button class="btn btn-light" data-del-cat="${esc(c)}" style="padding:5px 9px;color:var(--red)">${ic('x',14)}</button></div>`;
         }).join('')}</div>`;
     document.getElementById('closeDrawer').onclick = closeDrawer;
-    document.getElementById('addCatBtn').onclick = () => { const v = document.getElementById('newCatName').value; if (!v.trim()) return; Store.addCategory(v); draw(); };
-    document.querySelectorAll('[data-del-cat]').forEach(b => b.onclick = () => { Store.removeCategory(b.dataset.delCat); draw(); });
+    document.getElementById('addCatBtn').onclick = async () => { const v = document.getElementById('newCatName').value; if (!v.trim()) return; if (window.SB) await SB.addCategory(v); else Store.addCategory(v); draw(); };
+    document.querySelectorAll('[data-del-cat]').forEach(b => b.onclick = async () => { if (window.SB) await SB.removeCategory(b.dataset.delCat); else Store.removeCategory(b.dataset.delCat); draw(); });
   };
   draw();
 }
@@ -441,3 +445,12 @@ function openDrawer(id) {
 function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); }
 document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeDrawer(); });
 function refreshCurrent(){ ({ dashboard:renderDashboard, orders:renderOrders, products:renderProducts, customers:renderCustomers }[state.view] || (()=>{}))(); updateAlerts(); }
+
+/* auto-refresh: pick up new orders when the tab regains focus + every 15s */
+window.addEventListener('focus', () => {
+  if (Store.isAdmin() && document.getElementById('app').style.display !== 'none') refreshCurrent();
+});
+setInterval(() => {
+  if (Store.isAdmin() && document.getElementById('app').style.display !== 'none'
+      && !document.getElementById('overlay').classList.contains('show')) refreshCurrent();
+}, 15000);

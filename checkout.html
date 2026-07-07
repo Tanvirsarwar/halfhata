@@ -31,11 +31,8 @@
       <div>
         <!-- login -->
         <div class="panel">
-          <h3>Login or Create Account</h3><div class="sub">Choose an option to continue</div>
-          <div class="oauth">
-            <button class="btn" id="btnGoogle"></button>
-            <button class="btn" id="btnCreate"></button>
-          </div>
+          <h3>Login or Create Account</h3><div class="sub" id="authSub">Sign in to save your details and track orders — or just continue as guest below.</div>
+          <div id="authMount"></div>
           <div id="loggedIn" class="notice hide" style="margin-top:14px"></div>
         </div>
 
@@ -66,24 +63,6 @@
                 <small>Pay minimum ৳120 now to confirm your order. Pay the rest to the delivery man.</small>
               </div>
             </div>
-            <div class="detail">
-              <div>
-                <div class="field" style="margin-bottom:6px"><label>Payment Amount (Minimum ৳120)</label>
-                  <input id="f_amount" type="number" min="120" value="120"></div>
-                <small style="color:var(--muted)" id="minhint">Minimum required: ৳120</small>
-                <div class="field" style="margin-top:14px"><label>Transaction ID <span class="req">*</span></label>
-                  <input id="f_txn" placeholder="Nagad / bKash transaction ID"><div class="msg">Transaction ID is required</div></div>
-                <small style="color:var(--muted)">Enter your Nagad / bKash transaction ID</small>
-              </div>
-              <div>
-                <label style="font-size:13px;font-weight:500">Send payment to</label>
-                <div id="payChips" style="display:flex;gap:8px;margin:8px 0 4px"></div>
-                <div style="font-size:13px;margin-bottom:16px">Our Number: <b id="ourNumber"></b></div>
-                <label style="font-size:13px;font-weight:500">Upload Payment Screenshot</label>
-                <label class="upload" style="margin-top:8px"><input type="file" id="f_shot" accept="image/*" hidden><span id="uploadLabel">Upload Screenshot</span></label>
-                <small style="color:var(--muted);display:block;margin-top:6px">JPG, PNG up to 5MB (optional)</small>
-              </div>
-            </div>
           </div>
 
           <div class="payopt" id="opt_full" data-opt="full">
@@ -91,6 +70,25 @@
               <input type="radio" name="pay" value="full">
               <div style="flex:1"><b>Pay Full Amount Now</b><small>Pay the full amount now and confirm your order.</small></div>
               <div style="font-weight:700;white-space:nowrap">Total: <span id="fullTotal"></span></div>
+            </div>
+          </div>
+
+          <div class="pay-detail" id="payDetail">
+            <div>
+              <div class="field" style="margin-bottom:6px"><label id="amtLabel">Payment Amount (Minimum ৳120)</label>
+                <input id="f_amount" type="number" min="120" value="120"></div>
+              <small style="color:var(--muted)" id="minhint">Minimum required: ৳120</small>
+              <div class="field" style="margin-top:14px"><label>Transaction ID <span class="req">*</span></label>
+                <input id="f_txn" placeholder="Nagad / bKash transaction ID"><div class="msg">Transaction ID is required</div></div>
+              <small style="color:var(--muted)">Enter your Nagad / bKash transaction ID</small>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:500">Send payment to</label>
+              <div id="payChips" style="display:flex;gap:8px;margin:8px 0 4px"></div>
+              <div style="font-size:13px;margin-bottom:16px">Our Number: <b id="ourNumber"></b></div>
+              <label style="font-size:13px;font-weight:500">Upload Payment Screenshot</label>
+              <label class="upload" style="margin-top:8px"><input type="file" id="f_shot" accept="image/*" hidden><span id="uploadLabel">Upload Screenshot</span></label>
+              <small style="color:var(--muted);display:block;margin-top:6px">JPG, PNG up to 5MB (optional)</small>
             </div>
           </div>
 
@@ -131,8 +129,10 @@
     <div class="copyright">© 2025 halfhata. All rights reserved.</div>
   </div></footer>
 
+  <script src="https://accounts.google.com/gsi/client" async></script>
   <script src="assets/js/data.js"></script>
   <script src="assets/js/store.js"></script>
+  <script src="assets/js/auth.js"></script>
   <script src="assets/js/checkout.js"></script>
 </body>
 </html>
