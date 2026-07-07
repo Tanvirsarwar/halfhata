@@ -10,7 +10,6 @@
 </head>
 <body>
 
-<!-- LOGIN GATE -->
 <div class="admin-gate" id="gate">
   <div class="gate-card">
     <img src="assets/img/logo.jpeg" alt="halfhata">
@@ -30,78 +29,86 @@
   </aside>
 
   <div class="main">
-    <div class="head">
-      <div class="searchbox"><span id="topSearchIc"></span><input id="globalSearch" placeholder="Search orders, customers, phone..."></div>
-      <div style="display:flex;align-items:center;gap:18px">
-        <button style="position:relative;color:#444" id="bellBtn"></button>
-        <div class="admin-user">
-          <div style="width:38px;height:38px;border-radius:50%;background:var(--black);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700">A</div>
-          <div><b>Admin</b><small>Super Admin</small></div>
-          <button class="btn btn-light" id="logoutBtn" style="padding:8px 12px;margin-left:8px">Logout</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="admin-body">
-      <!-- ============ DASHBOARD ============ -->
+    <div class="container">
+      
       <section class="view" id="view-dashboard">
-        <h1>Dashboard</h1><div class="crumb">Overview of your store</div>
-        <div class="panel" id="dashHint" style="display:none;background:var(--cream-2);border:1px dashed #d8cfc0;margin-bottom:20px">
-          <b>Welcome — your store is empty and ready.</b>
-          <span style="color:var(--muted)">Head to <b>Products → Add Product</b> to publish your first t-shirts. Orders and stats will appear here as customers buy.</span>
-        </div>
-        <div class="kpis" id="kpis"></div>
-        <div class="dash-grid">
-          <div class="panel"><div class="panel-head"><b>Revenue — last 14 days</b><span id="revTotal" class="muted"></span></div><div id="chartRevenue"></div></div>
-          <div class="panel"><div class="panel-head"><b>Orders by status</b></div><div class="donut-wrap"><div id="chartStatus"></div><div id="statusLegend" class="legend"></div></div></div>
-        </div>
-        <div class="dash-grid">
-          <div class="panel"><div class="panel-head"><b>Payment split</b></div><div id="chartPayment"></div></div>
-          <div class="panel"><div class="panel-head"><b>Top products</b></div><div id="topProducts"></div></div>
-        </div>
-        <div class="panel"><div class="panel-head"><b>Recent activity</b></div><div id="activity"></div></div>
+        <h1>Dashboard Overview</h1>
+        <div class="crumb">Real-time status updates from Supabase</div>
+        <div id="dashContent"></div>
       </section>
 
-      <!-- ============ ORDERS ============ -->
       <section class="view" id="view-orders" style="display:none">
-        <h1>Orders</h1><div class="crumb">Dashboard › Orders</div>
-        <div class="stats" id="stats"></div>
+        <h1>Orders Registry</h1>
+        <div class="crumb" id="orderCount">0 total orders match</div>
+        
         <div class="toolbar">
-          <div class="sb"><span id="tblSearchIc"></span><input id="tblSearch" placeholder="Search by Order ID, Name, Phone"></div>
-          <select id="fStatus"><option value="">All Status</option><option>Pending</option><option>On Courier</option><option>Delivered</option><option>Cancelled</option></select>
-          <select id="fPayment"><option value="">All Payment</option><option>Cash on Delivery</option><option>Partial Paid</option><option>Full Paid</option></select>
-          <select id="fCourier"><option value="">All Courier</option></select>
-          <input type="date" id="fFrom" class="datebtn" title="From date">
-          <input type="date" id="fTo" class="datebtn" title="To date">
-          <button class="btn btn-light" id="exportBtn"></button>
+          <div class="sb">
+            <input id="orderSearch" placeholder="Search Order ID / Client Name / Phone Number">
+          </div>
         </div>
-        <div class="tbl-wrap"><table><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table><div class="pager" id="pager"></div></div>
+
+        <div id="orderFiltersLayout" style="margin: 14px 0;"></div>
+
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Order Ref</th>
+                <th>Recipient</th>
+                <th>City / Region</th>
+                <th>Status</th>
+                <th>Method</th>
+                <th>Total Bill</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="orderBody"></tbody>
+          </table>
+        </div>
+
+        <div id="orderPager" style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding:10px 0;"></div>
       </section>
 
-      <!-- ============ PRODUCTS ============ -->
       <section class="view" id="view-products" style="display:none">
-        <h1>Products</h1><div class="crumb">Catalogue · <span id="prodCount">0</span> items</div>
-        <div class="toolbar">
-          <div class="sb"><span id="prodSearchIc"></span><input id="prodSearch" placeholder="Search products"></div>
-          <button class="btn btn-light" id="manageCatsBtn"></button>
-          <button class="btn btn-dark" id="addProdBtn"></button>
+        <h1>Products Catalog</h1>
+        <div class="crumb" id="prodCount">0 total active items</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Media</th>
+                <th>Product Context</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="prodBody"></tbody>
+          </table>
         </div>
-        <div class="tbl-wrap"><table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Sold</th><th>Revenue</th><th>Status</th><th>Action</th></tr></thead><tbody id="prodBody"></tbody></table></div>
       </section>
 
-      <!-- ============ CUSTOMERS ============ -->
       <section class="view" id="view-customers" style="display:none">
-        <h1>Customers</h1><div class="crumb">Everyone who ordered · <span id="custCount"></span></div>
-        <div class="toolbar"><div class="sb"><span id="custSearchIc"></span><input id="custSearch" placeholder="Search name / phone / city"></div>
-          <button class="btn btn-light" id="custExport"></button></div>
-        <div class="tbl-wrap"><table><thead><tr><th>Customer</th><th>Phone</th><th>City</th><th>Orders</th><th>Total Spent</th><th>Collected</th><th>Last Order</th></tr></thead><tbody id="custBody"></tbody></table></div>
+        <h1>Customers Analytics</h1>
+        <div class="crumb" id="custCount">0 buyers cataloged</div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Phone</th>
+                <th>City</th>
+                <th>Total Orders</th>
+                <th>Total Lifetime Spend</th>
+                <th>Last Interaction</th>
+              </tr>
+            </thead>
+            <tbody id="custBody"></tbody>
+          </table>
+        </div>
       </section>
 
-      <!-- ============ GENERIC (coupons/reviews/settings) ============ -->
-      <section class="view" id="view-generic" style="display:none">
-        <h1 id="genTitle"></h1><div class="crumb" id="genCrumb"></div>
-        <div class="panel"><div class="empty" id="genBody"></div></div>
-      </section>
     </div>
   </div>
 </div>
