@@ -190,23 +190,73 @@ function updateStep() {
 }
 
 /* place order */
-document.getElementById('placeBtn').onclick = () => {
+document.getElementById('placeBtn').onclick = async () => {
   const user = Store.getUser();
-  if (!user || !user.provider) {
-    toast('Please sign in first to place your order');
-    document.getElementById('authMount')?.classList.remove('hide');
-    document.getElementById('authMount')?.scrollIntoView({ behavior:'smooth', block:'center' });
+  
+  // 1. Validation check
+  if (!validate(true)) { 
+    toast('Please correct the highlighted delivery fields'); 
+    document.querySelector('.field.err')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return; 
+  }
+
+  const cartLines = Store.cartLines();
+  if (!cartLines || cartLines.length === 0) {
+    toast('Your shopping cart is empty');
     return;
   }
-  if (!validate(true)) { toast('Please complete the required fields'); document.querySelector('.field.err')?.scrollIntoView({behavior:'smooth',block:'center'}); return; }
-  const f = readForm();
-  const customer = { name:f.name, phone:f.phone, district:f.district, city:f.city, address:f.address, email:user.email || '' };
-  Store.setUser({ ...user, ...customer });
-  const payment = payMethod === 'full'
-    ? { method:'full', amount:Number(f.amount), txnId:f.txn, channel:'nagad', screenshot:screenshotName }
-    : { method:'cod', amount:Number(f.amount), txnId:f.txn, channel:'nagad', screenshot:screenshotName };
-  const order = Store.placeOrder({ customer, payment });
-  location.href = 'success.html?id=' + order.id;
+
+  // 2. Prevent double-clicking issues by loading-throttling the button UI
+  const orderButton = document.getElementById('placeBtn');
+  const originalBtnHtml = orderButton.innerHTML;
+  orderButton.innerHTML = 'Sending Order to Cloud... Please wait...';
+  orderButton.disabled = true;
+
+  const formFields = readForm();
+  
+  // 3. Format payload to match your exact Supabase SQL columns
+  const orderPayload = {
+    user_id: (user && user.id && user.id.length > 5) ? user.id : null,
+    ship_name: formFields.name,
+    ship_phone: formFields.phone,
+    ship_district: formFields.district,
+    ship_city: formFields.city,
+    ship_address: formFields.address,
+    subtotal: Number(Store.cartSubtotal()) || 0,
+    delivery: Number(HH.deliveryCharge) || 80,
+    discount: 0,
+    total: Number(Store.cartSubtotal() + HH.deliveryCharge) || 0,
+    status: 'pending'
+  };
+
+  const itemsArray = cartLines.map(line => ({
+    id: line.id,
+    name: line.product.name,
+    price: line.product.price,
+    size: line.size,
+    color: line.color || null,
+    qty: line.qty
+  }));
+
+  // 4. Send directly to your live Supabase cloud database
+  if (window.SB && typeof window.SB.createCloudOrder === 'function') {
+    const transactionResult = await window.SB.createCloudOrder(orderPayload, itemsArray);
+
+    if (transactionResult.ok) {
+      // WIPE local cart ONLY when the database confirms a safe save
+      localStorage.removeItem('hh_cart'); 
+      window.location.href = 'success.html?id=' + transactionResult.id;
+    } else {
+      // Restore button if something goes wrong
+      orderButton.innerHTML = originalBtnHtml;
+      orderButton.disabled = false;
+      alert('Order rejection from Supabase: ' + transactionResult.error);
+    }
+  } else {
+    orderButton.innerHTML = originalBtnHtml;
+    orderButton.disabled = false;
+    alert('Critical System Defect: Supabase cloud order driver engine was not found.');
+  }
 };
 
 chrome(); renderSummary(); updateStep();
