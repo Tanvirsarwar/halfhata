@@ -342,27 +342,68 @@ function syncDesignInputs() {
 }
 async function saveProduct(editing) {
   syncDesignInputs();
-  toast('Saving…');
+  toast('Syncing with database...');
+
   const category = (document.getElementById('pCat').value || '').trim();
   const badge = document.getElementById('pBadge').value || null;
   const kind = (document.querySelector('input[name=pKind]:checked') || {}).value || 'tshirt';
   const sizes = [...document.querySelectorAll('.sizes-row input[type=checkbox]:checked')].map(c => c.value);
   const valid = designRows.filter(d => d.name.trim() && Number(d.price) > 0);
+
   if (!category) return toast('Enter a category');
   if (!valid.length) return toast('Add a design name and price');
-  if (!valid.every(d => d.image) && !editing) { if (!confirm('Some designs have no photo. Publish anyway?')) return; }
-  if (window.SB) await SB.addCategory(category); else Store.addCategory(category);
-  if (editing) {
-    const d = valid[0];
-    const patch = { name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind };
-    if (window.SB) await SB.updateProduct(editing.id, patch); else Store.updateProduct(editing.id, patch);
-    toast('Product updated');
-  } else {
-    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind }));
-    if (window.SB) await SB.createProducts(list); else list.forEach(x => Store.addProduct(x));
-    toast(`${valid.length} ${kind === 'jersey' ? 'jersey' : 'product'}(s) published`);
+
+  try {
+    // 1. Ensure category rule exists in cloud first
+    if (window.SB && SB.ready) {
+      await SB.addCategory(category);
+    }
+
+    if (editing) {
+      const d = valid[0];
+      const patch = {
+        name: d.name.trim(),
+        price: Number(d.price),
+        image: d.image,
+        category,
+        badge,
+        sizes,
+        kind
+      };
+
+      if (window.SB && SB.ready) {
+        await SB.updateProduct(editing.id, patch);
+      } else {
+        Store.updateProduct(editing.id, patch);
+      }
+      toast('Product updated globally!');
+    } else {
+      // Create new entries formatted precisely
+      const listToCreate = valid.map(d => ({
+        name: d.name.trim(),
+        price: Number(d.price),
+        image: d.image,
+        category,
+        badge,
+        sizes,
+        kind
+      }));
+
+      if (window.SB && SB.ready) {
+        await SB.createProducts(listToCreate);
+      } else {
+        listToCreate.forEach(p => Store.addProduct(p));
+      }
+      toast(`${valid.length} design(s) published live!`);
+    }
+
+    closeDrawer();
+    refreshCurrent();
+
+  } catch (err) {
+    console.error("❌ CLOUD SAVE FAILURE:", err);
+    alert("Could not sync data: " + err.message);
   }
-  closeDrawer(); renderProducts();
 }
 function openCategoryManager() {
   document.getElementById('overlay').classList.add('show');
