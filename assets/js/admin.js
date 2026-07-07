@@ -1,5 +1,5 @@
-/* ============ Admin (Fully Restored & Supabase Connected) ============ */
-Store.seed();
+/* ============ Admin (Fully Error-Guarded & Supabase Synced) ============ */
+if (typeof Store !== 'undefined' && Store.seed) { Store.seed(); }
 
 const statusPill = { 'Pending':'pill-amber','On Courier':'pill-blue','Delivered':'pill-green','Cancelled':'pill-red' };
 const statusColor = { 'Pending':'#b7791f','On Courier':'#2563eb','Delivered':'#16a34a','Cancelled':'#dc2626' };
@@ -12,14 +12,19 @@ let state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sort
 
 /* ---------- AUTHENTICATION & LOGIN GATE ---------- */
 async function tryLogin() {
-  const pw = document.getElementById('gatePw').value;
-  if (await Store.adminLogin(pw)) { showApp(); }
-  else { document.getElementById('gateHint').innerHTML = '<b style="color:var(--red)">Wrong password. Try again.</b>'; }
+  const gatePwEl = document.getElementById('gatePw');
+  if (!gatePwEl) return;
+  const pw = gatePwEl.value;
+  if (typeof Store !== 'undefined' && await Store.adminLogin(pw)) { showApp(); }
+  else { 
+    const gateHintEl = document.getElementById('gateHint');
+    if (gateHintEl) gateHintEl.innerHTML = '<b style="color:var(--red)">Wrong password. Try again.</b>'; 
+  }
 }
 
 function showApp() {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
+  const gateEl = document.getElementById('gate'); if (gateEl) gateEl.style.display = 'none';
+  const appEl = document.getElementById('app'); if (appEl) appEl.style.display = 'flex';
   renderNav();
   refreshCurrent();
 }
@@ -32,25 +37,39 @@ function renderNav() {
     { id:'products', label:'Products', ic:'shirt' },
     { id:'customers', label:'Customers', ic:'user' },
   ];
-  document.getElementById('sideNav').innerHTML = navs.map(n => `
-    <button class="nav-item ${state.view === n.id ? 'active' : ''}" data-view="${n.id}">
-      ${ic(n.ic, 18)} <span>${n.label}</span>
-    </button>
-  `).join('');
+  const sideNavEl = document.getElementById('sideNav');
+  if (sideNavEl) {
+    sideNavEl.innerHTML = navs.map(n => `
+      <button class="nav-item ${state.view === n.id ? 'active' : ''}" data-view="${n.id}">
+        ${typeof ic === 'function' ? ic(n.ic, 18) : '📦'} <span>${n.label}</span>
+      </button>
+    `).join('');
+  }
 
   document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => {
     state.view = b.dataset.view; state.page = 1;
     document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
-    document.getElementById(`view-${state.view}`).style.display = 'block';
+    const targetViewEl = document.getElementById(`view-${state.view}`);
+    if (targetViewEl) targetViewEl.style.display = 'block';
     renderNav(); refreshCurrent();
   });
 }
 
-// Global data streamer that extracts entries instantly from Supabase tables
+// Fixed core streamer to cleanly pull from your initialized client layer
 async function getLiveOrders() {
-  if (!window.supabase) return [];
+  // Use the pre-warmed client variable or window reference inside your supabase.js code
+  let clientInstance = null;
+  if (typeof sb !== 'undefined') { clientInstance = sb; }
+  else if (window.SB && window.SB.getClient) { clientInstance = window.SB.getClient(); }
+  else if (window.supabase && typeof window.supabase.from === 'function') { clientInstance = window.supabase; }
+  
+  if (!clientInstance) {
+    console.warn("Supabase driver not initialized yet. Falling back to empty dataset.");
+    return [];
+  }
+
   try {
-    const { data: cloudOrders, error } = await window.supabase
+    const { data: cloudOrders, error } = await clientInstance
       .from('orders')
       .select('*, order_items(*)')
       .order('created_at', { ascending: false });
@@ -79,10 +98,10 @@ async function getLiveOrders() {
         size: it.size || 'M',
         qty: Number(it.qty) || 1
       })),
-      timeline: [{ status: 'Placed', at: o.created_at, note: 'Cloud Synced Order' }]
+      timeline: [{ status: 'Placed', at: o.created_at, note: 'Cloud Synced' }]
     }));
   } catch (err) {
-    console.error("Supabase cluster link broken:", err);
+    console.error("Supabase link processing error:", err);
     return [];
   }
 }
@@ -91,7 +110,7 @@ async function updateAlerts() {
   const list = await getLiveOrders();
   const pendingCount = list.filter(o => o.status === 'Pending').length;
   const bell = document.getElementById('bellBtn');
-  if (bell) {
+  if (bell && typeof ic === 'function') {
     bell.innerHTML = ic('bell', 20) + (pendingCount > 0 ? `<span class="notif-badge">${pendingCount}</span>` : '');
   }
 }
@@ -103,15 +122,17 @@ async function renderDashboard() {
   const delivered = list.filter(o => o.status === 'Delivered');
   const revenue = delivered.reduce((sum, o) => sum + o.total, 0);
 
-  document.getElementById('sideContact').innerHTML = `<div class="muted">Phone: ${HH.phone}<br>Email: ${HH.email}</div>`;
+  const sideContactEl = document.getElementById('sideContact');
+  if (sideContactEl && typeof HH !== 'undefined') {
+    sideContactEl.innerHTML = `<div class="muted">Phone: ${HH.phone || ''}<br>Email: ${HH.email || ''}</div>`;
+  }
   
-  // Show standard welcome banner if database tables contain no records
   const hintPanel = document.getElementById('dashHint');
   if (hintPanel) hintPanel.style.display = list.length === 0 ? 'block' : 'none';
 
-  // Populates your precise layout containers (#kpis, #revTotal) 
+  // ABSOLUTE SAFETY GUARDS ADDED HERE: Checks if elements exist before setting innerHTML
   const kpis = document.getElementById('kpis');
-  if (kpis) {
+  if (kpis && typeof money === 'function') {
     kpis.innerHTML = `
       <div class="card card-summary"><h3>${money(revenue)}</h3><span class="muted">Delivered Revenue</span></div>
       <div class="card card-summary"><h3>${list.length}</h3><span class="muted">Lifetime Orders</span></div>
@@ -120,13 +141,18 @@ async function renderDashboard() {
   }
   
   const revTotal = document.getElementById('revTotal');
-  if (revTotal) revTotal.textContent = `Total: ${money(revenue)}`;
+  if (revTotal && typeof money === 'function') revTotal.textContent = `Total: ${money(revenue)}`;
 
-  // Populate basic summary elements inside the charts panels safely
-  document.getElementById('chartRevenue').innerHTML = `<div style="padding:20px;font-weight:500;color:var(--muted)"> Delighted to serve: ${delivered.length} finalized direct items.</div>`;
-  document.getElementById('chartStatus').innerHTML = `<div class="summary-stat-box">Pending: <b>${pending.length}</b> · Shipped: <b>${list.filter(o => o.status==='On Courier').length}</b></div>`;
+  const chartRevEl = document.getElementById('chartRevenue');
+  if (chartRevEl) {
+    chartRevEl.innerHTML = `<div style="padding:20px;font-weight:500;color:var(--muted)">Delighted to serve: ${delivered.length} finalized direct items.</div>`;
+  }
+
+  const chartStatEl = document.getElementById('chartStatus');
+  if (chartStatEl) {
+    chartStatEl.innerHTML = `<div class="summary-stat-box">Pending: <b>${pending.length}</b> · Shipped: <b>${list.filter(o => o.status==='On Courier').length}</b></div>`;
+  }
   
-  // Render active orders streaming list directly inside your original #activity workspace
   const activity = document.getElementById('activity');
   if (activity) {
     if (!pending.length) {
@@ -134,7 +160,7 @@ async function renderDashboard() {
     } else {
       activity.innerHTML = pending.slice(0, 5).map(o => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #f2f1ef">
-          <div><b>#${esc(o.id)}</b> by <b>${esc(o.customer.name)}</b> (${esc(o.customer.city)})</div>
+          <div><b>#${typeof esc === 'function' ? esc(o.id) : o.id}</b> by <b>${typeof esc === 'function' ? esc(o.customer.name) : o.customer.name}</b> (${typeof esc === 'function' ? esc(o.customer.city) : o.customer.city})</div>
           <button class="btn btn-light btn-sm" onclick="openDrawer('${o.rawUuid}')">Process</button>
         </div>`).join('');
     }
@@ -145,13 +171,11 @@ async function renderDashboard() {
 async function renderOrders() {
   const allOrders = await getLiveOrders();
   
-  // Re-map column configurations to your exact original #thead structure element
   const thead = document.getElementById('thead');
   if (thead) {
     thead.innerHTML = `<tr><th>Order Ref</th><th>Recipient</th><th>City / Region</th><th>Status</th><th>Method</th><th>Total Bill</th><th>Action</th></tr>`;
   }
 
-  // Parse filters securely from input elements
   let f = allOrders;
   const searchVal = document.getElementById('tblSearch')?.value || state.search;
   const statusVal = document.getElementById('fStatus')?.value || state.status;
@@ -167,7 +191,6 @@ async function renderOrders() {
   const stats = document.getElementById('stats');
   if (stats) stats.innerHTML = `<div class="crumb">${f.length} orders match filter criteria</div>`;
 
-  // Pagination splitter logic matches your state variables
   const totalPages = Math.ceil(f.length / state.per) || 1;
   state.page = Math.max(1, Math.min(state.page, totalPages));
   const start = (state.page - 1) * state.per;
@@ -178,22 +201,21 @@ async function renderOrders() {
 
   if (!chunk.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="empty">No matching records found inside database view.</td></tr>';
-    document.getElementById('pager').innerHTML = '';
+    const pagerEl = document.getElementById('pager'); if (pagerEl) pagerEl.innerHTML = '';
     return;
   }
 
   tbody.innerHTML = chunk.map(o => `
     <tr class="clickable-row" onclick="openDrawer('${o.rawUuid}')">
-      <td><b>#${esc(o.id)}</b><div class="muted" style="font-size:11px">${fmtTime(o.createdAt)}</div></td>
-      <td><b>${esc(o.customer.name)}</b><div class="muted" style="font-size:12px">${esc(o.customer.phone)}</div></td>
-      <td>${esc(o.customer.city)}</td>
-      <td><span class="pill ${statusPill[o.status]}">${o.status}</span></td>
-      <td><span class="pill pill-light" style="color:${payColor[o.payment.method]}">${o.payment.method}</span></td>
-      <td><b>${money(o.total)}</b></td>
+      <td><b>#${typeof esc === 'function' ? esc(o.id) : o.id}</b><div class="muted" style="font-size:11px">${fmtTime(o.createdAt)}</div></td>
+      <td><b>${typeof esc === 'function' ? esc(o.customer.name) : o.customer.name}</b><div class="muted" style="font-size:12px">${typeof esc === 'function' ? esc(o.customer.phone) : o.customer.phone}</div></td>
+      <td>${typeof esc === 'function' ? esc(o.customer.city) : o.customer.city}</td>
+      <td><span class="pill ${statusPill[o.status] || ''}">${o.status}</span></td>
+      <td><span class="pill pill-light" style="color:${payColor[o.payment.method] || '#333'}">${o.payment.method}</span></td>
+      <td><b>${typeof money === 'function' ? money(o.total) : o.total}</b></td>
       <td><button class="btn btn-light btn-sm">Manage</button></td>
     </tr>`).join('');
 
-  // Handle previous/next pagination actions directly into original #pager area
   const pager = document.getElementById('pager');
   if (pager) {
     pager.innerHTML = `
@@ -201,13 +223,14 @@ async function renderOrders() {
       <span class="muted">Page ${state.page} of ${totalPages}</span>
       <button class="btn btn-light btn-sm" ${state.page===totalPages?'disabled':''} id="nextPageBtn">Next</button>`;
       
-    document.getElementById('prevPageBtn').onclick = () => { state.page--; renderOrders(); };
-    document.getElementById('nextPageBtn').onclick = () => { state.page++; renderOrders(); };
+    const pBtn = document.getElementById('prevPageBtn'); if (pBtn) pBtn.onclick = () => { state.page--; renderOrders(); };
+    const nBtn = document.getElementById('nextPageBtn'); if (nBtn) nBtn.onclick = () => { state.page++; renderOrders(); };
   }
 }
 
 /* ---------- VIEW: PRODUCTS & CATALOG CONTROLLERS ---------- */
 function renderProducts() {
+  if (typeof Store === 'undefined') return;
   const prods = Store.getProducts();
   const tbody = document.getElementById('prodBody');
   const countSpan = document.getElementById('prodCount');
@@ -224,16 +247,16 @@ function renderProducts() {
     <tr>
       <td>
         <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:34px;height:34px;background:#f5f4f2;border-radius:4px;overflow:hidden">${productMedia(p, '100%')}</div>
-          <div><b>${esc(p.name)}</b><br><small class="muted">${esc(p.id)}</small></div>
+          <div style="width:34px;height:34px;background:#f5f4f2;border-radius:4px;overflow:hidden">${typeof productMedia === 'function' ? productMedia(p, '100%') : ''}</div>
+          <div><b>${typeof esc === 'function' ? esc(p.name) : p.name}</b><br><small class="muted">${typeof esc === 'function' ? esc(p.id) : p.id}</small></div>
         </div>
       </td>
-      <td>${esc(p.category || '—')}</td>
-      <td><b>${money(p.price)}</b></td>
+      <td>${typeof esc === 'function' ? esc(p.category || '—') : (p.category || '—')}</td>
+      <td><b>${typeof money === 'function' ? money(p.price) : p.price}</b></td>
       <td>0</td>
       <td>৳0</td>
       <td><span class="pill ${p.active ? 'pill-green' : 'pill-red'}">${p.active ? 'Active' : 'Disabled'}</span></td>
-      <td><button class="btn btn-light btn-sm" onclick="alert('Product settings configuration locked to data.js definitions.')">Edit</button></td>
+      <td><button class="btn btn-light btn-sm" onclick="alert('Product editing runs via context config arrays')">Edit</button></td>
     </tr>`).join('');
 }
 
@@ -251,48 +274,60 @@ async function renderCustomers() {
 
   const list = Object.values(map);
   const countSpan = document.getElementById('custCount');
-  if (countSpan) countSpan.textContent = `${list.length} clients registered`;
+  if (countSpan) countSpan.textContent = `${list.length} buyers recorded`;
 
   const tbody = document.getElementById('custBody');
   if (!tbody) return;
 
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">No orders processed yet to catalog customers.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No orders parsed yet to index customer data.</td></tr>';
     return;
   }
 
   tbody.innerHTML = list.map(c => `
     <tr>
-      <td><b>${esc(c.name)}</b></td>
-      <td>${esc(c.phone)}</td>
-      <td>${esc(c.city)}</td>
+      <td><b>${typeof esc === 'function' ? esc(c.name) : c.name}</b></td>
+      <td>${typeof esc === 'function' ? esc(c.phone) : c.phone}</td>
+      <td>${typeof esc === 'function' ? esc(c.city) : c.city}</td>
       <td><b>${c.count} orders</b></td>
-      <td><b>${money(c.spent)}</b></td>
-      <td><b>${money(c.spent)}</b></td>
+      <td><b>${typeof money === 'function' ? money(c.spent) : c.spent}</b></td>
+      <td><b>${typeof money === 'function' ? money(c.spent) : c.spent}</b></td>
       <td><div class="muted" style="font-size:12px">${fmtDate(c.last)}</div></td>
     </tr>`).join('');
 }
 
-/* ---------- FLOATING ADJUSTMENT OVERLAY DRAWER MANAGEMENT ---------- */
+/* ---------- DRAWER MANAGEMENT PANEL ---------- */
 async function openDrawer(uuid) {
-  if (!window.supabase) return;
+  let clientInstance = null;
+  if (typeof sb !== 'undefined') { clientInstance = sb; }
+  else if (window.SB && window.SB.getClient) { clientInstance = window.SB.getClient(); }
+  else if (window.supabase && typeof window.supabase.from === 'function') { clientInstance = window.supabase; }
   
-  const { data: o, error } = await window.supabase
+  if (!clientInstance) return;
+  
+  const { data: o, error } = await clientInstance
     .from('orders')
     .select('*, order_items(*)')
     .eq('id', uuid)
     .single();
 
   if (error || !o) {
-    toast('Could not download complete order parameters');
+    if (typeof toast === 'function') toast('Could not download complete order parameters');
     return;
   }
 
-  document.getElementById('overlay').classList.add('show');
-  document.getElementById('drawer').innerHTML = `
+  const overlayEl = document.getElementById('overlay'); if (overlayEl) overlayEl.classList.add('show');
+  const drawerEl = document.getElementById('drawer');
+  if (!drawerEl) return;
+
+  const orderIdText = o.order_no || o.id.slice(0,8);
+  const safeEsc = val => typeof esc === 'function' ? esc(val) : val;
+  const safeMoney = val => typeof money === 'function' ? money(val) : val;
+
+  drawerEl.innerHTML = `
     <div class="drawer-header">
-      <div><h2>Order #${esc(o.order_no || o.id.slice(0,8))}</h2><small class="muted">${fmtTime(o.created_at)}</small></div>
-      <button class="close-btn" id="closeDrawer"></button>
+      <div><h2>Order #${safeEsc(orderIdText)}</h2><small class="muted">${fmtTime(o.created_at)}</small></div>
+      <button class="close-btn" id="closeDrawer">✕</button>
     </div>
     <div class="drawer-body">
       <div class="dgroup"><div class="t">Status Controls</div>
@@ -304,37 +339,35 @@ async function openDrawer(uuid) {
         </div>
       </div>
       <div class="dgroup"><div class="t">Shipping Parameters</div>
-        <div class="kv"><span>Recipient</span><b>${esc(o.ship_name)}</b></div>
-        <div class="kv"><span>Contact</span><b>${esc(o.ship_phone)}</b></div>
-        <div class="kv"><span>Destination</span><b>${esc(o.ship_address)}, ${esc(o.ship_city)}</b></div>
+        <div class="kv"><span>Recipient</span><b>${safeEsc(o.ship_name)}</b></div>
+        <div class="kv"><span>Contact</span><b>${safeEsc(o.ship_phone)}</b></div>
+        <div class="kv"><span>Destination</span><b>${safeEsc(o.ship_address)}, ${safeEsc(o.ship_city)}</b></div>
       </div>
       <div class="dgroup"><div class="t">Line Items</div>
         <div class="drawer-items">${(o.order_items || []).map(it => `
           <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px solid #f2f1ef">
-            <div style="flex:1"><b>${esc(it.name)}</b> <span class="muted">x${it.qty}</span><br><small class="muted">Size: ${esc(it.size || 'M')}</small></div>
-            <b>${money(it.price * it.qty)}</b>
+            <div style="flex:1"><b>${safeEsc(it.name)}</b> <span class="muted">x${it.qty}</span><br><small class="muted">Size: ${safeEsc(it.size || 'M')}</small></div>
+            <b>${safeMoney(it.price * it.qty)}</b>
           </div>`).join('')}</div>
       </div>
       <div class="dgroup"><div class="t">Billing Metrics</div>
-        <div class="kv"><span>Subtotal</span><b>${money(o.subtotal)}</b></div>
-        <div class="kv"><span>Delivery</span><b>${money(o.delivery)}</b></div>
-        <div class="kv"><span>Total Bill</span><b>${money(o.total)}</b></div>
+        <div class="kv"><span>Subtotal</span><b>${safeMoney(o.subtotal)}</b></div>
+        <div class="kv"><span>Delivery</span><b>${safeMoney(o.delivery)}</b></div>
+        <div class="kv"><span>Total Bill</span><b>${safeMoney(o.total)}</b></div>
       </div>
     </div>`;
 
-  document.getElementById('closeDrawer').innerHTML = ic('x', 20);
-  document.getElementById('closeDrawer').onclick = closeDrawer;
+  const cBtn = document.getElementById('closeDrawer'); if (cBtn) cBtn.onclick = closeDrawer;
   
-  // Status changer button bindings
   document.querySelectorAll('[data-status]').forEach(b => b.onclick = async () => {
     const nextStatus = b.dataset.status;
-    const { error: patchError } = await window.supabase
+    const { error: patchError } = await clientInstance
       .from('orders')
       .update({ status: nextStatus })
       .eq('id', uuid);
 
     if (!patchError) {
-      toast(`Status updated → ${nextStatus}`);
+      if (typeof toast === 'function') toast(`Status updated → ${nextStatus}`);
       refreshCurrent();
       openDrawer(uuid);
     } else {
@@ -343,8 +376,15 @@ async function openDrawer(uuid) {
   });
 }
 
-function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); }
-document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeDrawer(); });
+function closeDrawer(){ 
+  const overlayEl = document.getElementById('overlay');
+  if (overlayEl) overlayEl.classList.remove('show'); 
+}
+
+const overlayEl = document.getElementById('overlay');
+if (overlayEl) {
+  overlayEl.addEventListener('click', e => { if (e.target.id === 'overlay') closeDrawer(); });
+}
 
 function refreshCurrent(){ 
   ({ 
@@ -362,22 +402,22 @@ document.getElementById('tblSearch')?.addEventListener('input', e => { state.sea
 document.getElementById('fStatus')?.addEventListener('change', e => { state.status = e.target.value; state.page = 1; renderOrders(); });
 document.getElementById('fPayment')?.addEventListener('change', e => { state.payment = e.target.value; state.page = 1; renderOrders(); });
 
-// Polling interval cycle keeps data alive automatically
 window.addEventListener('focus', () => { refreshCurrent(); });
 setInterval(() => { refreshCurrent(); }, 30000);
 
-document.getElementById('gateBtn').onclick = tryLogin;
-document.getElementById('gatePw').onkeydown = e => { if (e.key === 'Enter') tryLogin(); };
-document.getElementById('logoutBtn').onclick = () => { location.reload(); };
+const gateBtnEl = document.getElementById('gateBtn'); if (gateBtnEl) gateBtnEl.onclick = tryLogin;
+const gatePwEl = document.getElementById('gatePw'); if (gatePwEl) gatePwEl.onkeydown = e => { if (e.key === 'Enter') tryLogin(); };
+const logoutBtnEl = document.getElementById('logoutBtn'); if (logoutBtnEl) logoutBtnEl.onclick = () => { location.reload(); };
 
-// Populate initial icon decorators onto your original admin page markup tags
 document.addEventListener('DOMContentLoaded', () => {
-  const topIc = document.getElementById('topSearchIc'); if (topIc) topIc.innerHTML = ic('search', 16);
-  const tblIc = document.getElementById('tblSearchIc'); if (tblIc) tblIc.innerHTML = ic('search', 16);
-  const prodIc = document.getElementById('prodSearchIc'); if (prodIc) prodIc.innerHTML = ic('search', 16);
-  const custIc = document.getElementById('custSearchIc'); if (custIc) custIc.innerHTML = ic('search', 16);
-  const addBtn = document.getElementById('addProdBtn'); if (addBtn) addBtn.innerHTML = ic('plus', 16) + ' <span>Add Product</span>';
-  const catBtn = document.getElementById('manageCatsBtn'); if (catBtn) catBtn.innerHTML = ic('folder', 16) + ' <span>Categories</span>';
-  const expBtn = document.getElementById('exportBtn'); if (expBtn) expBtn.innerHTML = ic('download', 16) + ' <span>Export</span>';
-  const cExpBtn = document.getElementById('custExport'); if (cExpBtn) cExpBtn.innerHTML = ic('download', 16) + ' <span>Export List</span>';
+  if (typeof ic === 'function') {
+    const topIc = document.getElementById('topSearchIc'); if (topIc) topIc.innerHTML = ic('search', 16);
+    const tblIc = document.getElementById('tblSearchIc'); if (tblIc) tblIc.innerHTML = ic('search', 16);
+    const prodIc = document.getElementById('prodSearchIc'); if (prodIc) prodIc.innerHTML = ic('search', 16);
+    const custIc = document.getElementById('custSearchIc'); if (custIc) custIc.innerHTML = ic('search', 16);
+    const addBtn = document.getElementById('addProdBtn'); if (addBtn) addBtn.innerHTML = ic('plus', 16) + ' <span>Add Product</span>';
+    const catBtn = document.getElementById('manageCatsBtn'); if (catBtn) catBtn.innerHTML = ic('folder', 16) + ' <span>Categories</span>';
+    const expBtn = document.getElementById('exportBtn'); if (expBtn) expBtn.innerHTML = ic('download', 16) + ' <span>Export</span>';
+    const cExpBtn = document.getElementById('custExport'); if (cExpBtn) cExpBtn.innerHTML = ic('download', 16) + ' <span>Export List</span>';
+  }
 });
