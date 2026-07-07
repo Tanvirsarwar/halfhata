@@ -1,5 +1,5 @@
 /* ============ Admin (multi-view dashboard) ============ */
-//Store.seed();
+Store.seed();
 
 const statusPill = { 'Pending':'pill-amber','On Courier':'pill-blue','Delivered':'pill-green','Cancelled':'pill-red' };
 const statusColor = { 'Pending':'#b7791f','On Courier':'#2563eb','Delivered':'#16a34a','Cancelled':'#dc2626' };
@@ -234,30 +234,17 @@ function download(name, text) {
 
 /* ---------- PRODUCTS ---------- */
 function wireProducts() {
-  document.getElementById('tblProdSearch').addEventListener('input', e => { state.search = e.target.value; renderProducts(); });
-  document.getElementById('addProdBtn').onclick = () => openProductDrawer();
-  document.getElementById('catMgrBtn').onclick = openCategoryManager;
-  document.addEventListener('click', e => {
-    const edit = e.target.closest('[data-edit-prod]');
-    if (edit) {
-      const pId = edit.dataset.editProd;
-      const cachedProds = JSON.parse(localStorage.getItem('hh_products') || '[]');
-      const target = cachedProds.find(p => p.id === pId);
-      openProductDrawer(target);
-    }
-    const del = e.target.closest('[data-del-prod]');
-    if (del && confirm('Delete this product permanently from the live database?')) {
-      if (window.SB && SB.ready) {
-        SB.deleteProduct(del.dataset.delProd).then(() => {
-          toast('Deleted from database universally');
-          renderProducts();
-        });
-      } else {
-        Store.deleteProduct(del.dataset.delProd);
-        toast('Deleted locally');
-        renderProducts();
-      }
-    }
+  document.getElementById('prodSearchIc').innerHTML = ic('search',16);
+  document.getElementById('addProdBtn').innerHTML = ic('plus',16) + ' Add Product';
+  document.getElementById('manageCatsBtn').innerHTML = ic('tag',16) + ' Categories';
+  document.getElementById('prodSearch').addEventListener('input', renderProducts);
+  document.getElementById('addProdBtn').onclick = () => openProductForm(null);
+  document.getElementById('manageCatsBtn').onclick = openCategoryManager;
+  document.getElementById('prodBody').addEventListener('click', async e => {
+    const ed = e.target.closest('[data-edit-prod]'); if (ed) openProductForm(ed.dataset.editProd);
+    const dl = e.target.closest('[data-del-prod]');
+    if (dl) { const p = Store.getProducts().find(x => x.id === dl.dataset.delProd);
+      if (confirm(`Delete "${p?.name}"? This can't be undone.`)) { if (window.SB) await SB.deleteProduct(dl.dataset.delProd); else Store.deleteProduct(dl.dataset.delProd); toast('Product deleted'); renderProducts(); } }
   });
 }
 function renderProducts() {
@@ -355,68 +342,27 @@ function syncDesignInputs() {
 }
 async function saveProduct(editing) {
   syncDesignInputs();
-  toast('Syncing with database...');
-
+  toast('Saving…');
   const category = (document.getElementById('pCat').value || '').trim();
   const badge = document.getElementById('pBadge').value || null;
   const kind = (document.querySelector('input[name=pKind]:checked') || {}).value || 'tshirt';
   const sizes = [...document.querySelectorAll('.sizes-row input[type=checkbox]:checked')].map(c => c.value);
   const valid = designRows.filter(d => d.name.trim() && Number(d.price) > 0);
-
   if (!category) return toast('Enter a category');
   if (!valid.length) return toast('Add a design name and price');
-
-  try {
-    // 1. Ensure category rule exists in cloud first
-    if (window.SB && SB.ready) {
-      await SB.addCategory(category);
-    }
-
-    if (editing) {
-      const d = valid[0];
-      const patch = {
-        name: d.name.trim(),
-        price: Number(d.price),
-        image: d.image,
-        category,
-        badge,
-        sizes,
-        kind
-      };
-
-      if (window.SB && SB.ready) {
-        await SB.updateProduct(editing.id, patch);
-      } else {
-        Store.updateProduct(editing.id, patch);
-      }
-      toast('Product updated globally!');
-    } else {
-      // Create new entries formatted precisely
-      const listToCreate = valid.map(d => ({
-        name: d.name.trim(),
-        price: Number(d.price),
-        image: d.image,
-        category,
-        badge,
-        sizes,
-        kind
-      }));
-
-      if (window.SB && SB.ready) {
-        await SB.createProducts(listToCreate);
-      } else {
-        listToCreate.forEach(p => Store.addProduct(p));
-      }
-      toast(`${valid.length} design(s) published live!`);
-    }
-
-    closeDrawer();
-    refreshCurrent();
-
-  } catch (err) {
-    console.error("❌ CLOUD SAVE FAILURE:", err);
-    alert("Could not sync data: " + err.message);
+  if (!valid.every(d => d.image) && !editing) { if (!confirm('Some designs have no photo. Publish anyway?')) return; }
+  if (window.SB) await SB.addCategory(category); else Store.addCategory(category);
+  if (editing) {
+    const d = valid[0];
+    const patch = { name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind };
+    if (window.SB) await SB.updateProduct(editing.id, patch); else Store.updateProduct(editing.id, patch);
+    toast('Product updated');
+  } else {
+    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind }));
+    if (window.SB) await SB.createProducts(list); else list.forEach(x => Store.addProduct(x));
+    toast(`${valid.length} ${kind === 'jersey' ? 'jersey' : 'product'}(s) published`);
   }
+  closeDrawer(); renderProducts();
 }
 function openCategoryManager() {
   document.getElementById('overlay').classList.add('show');
