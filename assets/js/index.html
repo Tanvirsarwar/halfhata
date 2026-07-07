@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>halfhata — Wear Your Style. Own Your Identity.</title>
+<meta name="description" content="halfhata — premium quality clothing crafted for you. Cash on Delivery all over Bangladesh.">
+<link rel="icon" href="assets/img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+  <!-- announcement -->
+  <div class="announce"><div class="container">
+    <div class="left"><span>Free Delivery on orders over ৳1,500</span><span>Cash on Delivery Available</span><span>Easy Returns</span></div>
+  </div></div>
+
+  <!-- nav -->
+  <header class="nav"><div class="container">
+    <a class="brand" href="index.html"><img src="assets/img/logo.jpeg" alt="halfhata"> halfhata</a>
+    <nav class="nav-links">
+      <a class="active" href="index.html">Home</a><a href="#new">Shop</a><a href="#new">New Arrivals</a>
+      <a href="#best">Best Sellers</a><a href="jersey.html">Jersey</a><a href="#footer">About Us</a>
+      <a class="nav-cta" href="https://wa.me/880199210064?text=Hi%20halfhata%2C%20I%20want%20a%20custom%20design%20order" target="_blank">Custom Design</a>
+    </nav>
+    <div class="nav-icons">
+      <button title="Search" id="navSearch"></button>
+      <div class="notif-wrap">
+        <button title="Notifications" id="navBell"></button>
+        <span class="notif-badge hide" id="navBellBadge">0</span>
+        <div class="notif-menu" id="notifMenu">
+          <div class="nm-head"><b>Notifications</b><button id="markRead">Mark all read</button></div>
+          <div class="notif-list" id="notifList"></div>
+        </div>
+      </div>
+      <button title="Account" onclick="location.href='account.html'" id="navUser"></button>
+      <button title="Cart" onclick="goCheckout()"><span id="navCart"></span><span class="cart-badge hide" id="navCartBadge">0</span></button>
+    </div>
+  </div></header>
+
+  <!-- hero (static banner — drop your image at assets/img/hero.png) -->
+  <section class="hero"><div class="hero-overlay"></div><div class="container">
+    <div class="hero-content">
+      <h1>Wear Your Style.<br>Own Your Identity.</h1>
+      <p>Premium quality clothing crafted for you.</p>
+      <a class="btn btn-lg hero-btn" href="#new">Shop Now <span id="heroArrow"></span></a>
+    </div>
+  </div></section>
+
+  <!-- feature strip -->
+  <div class="container"><div class="features" id="features"></div></div>
+
+  <!-- new arrivals -->
+  <section class="section" id="new"><div class="container">
+    <div class="section-head"><h2>New Arrivals</h2><a href="#best">View All <span id="va1"></span></a></div>
+    <div class="grid" id="gridNew"></div>
+  </div></section>
+
+  <!-- best sellers -->
+  <section class="section" id="best" style="padding-top:0"><div class="container">
+    <div class="section-head"><h2>Best Sellers</h2><a href="#new">View All <span id="va2"></span></a></div>
+    <div class="grid" id="gridBest"></div>
+  </div></section>
+
+  <!-- footer -->
+  <footer class="footer" id="footer"><div class="container">
+    <a class="brand" href="index.html" style="color:#fff"><img src="assets/img/logo.jpeg" alt=""> halfhata</a>
+    <div class="pay" id="footerChannels"></div>
+    <div class="copyright">© 2026 halfhata. All rights reserved. &nbsp;·&nbsp; Premium quality clothing crafted in Bangladesh.</div>
+  </div></footer>
+
+  <!-- floating order bar -->
+  <div class="orderbar" id="orderbar"><div class="inner">
+    <div class="cartinfo">
+      <div class="cw"><span id="obCartIc"></span><span class="n" id="obCount">0</span></div>
+      <div><b id="obItems">0 items in cart</b><br><small style="color:var(--muted)" id="obTotal">৳0</small></div>
+    </div>
+    <button class="btn btn-dark btn-lg" onclick="goCheckout()">Order Now <span id="obArrow"></span></button>
+  </div></div>
+
+  <!-- whatsapp float -->
+  <a class="wa-float" id="waFloat" target="_blank" title="Chat on WhatsApp"></a>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/landing.js"></script>
+</body>
+</html>
