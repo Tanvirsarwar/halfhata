@@ -7,6 +7,9 @@ const payColor = { 'Cash on Delivery':'#6b7280','Partial Paid':'#2563eb','Full P
 const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 const fmtTime = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
 
+/* ---------- STATE (must be before the login gate auto-runs) ---------- */
+let state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sortKey:'createdAt', sortDir:-1, page:1, per:10, view:'dashboard' };
+
 /* ---------- LOGIN GATE ---------- */
 async function tryLogin() {
   const pw = document.getElementById('gatePw').value;
@@ -23,8 +26,6 @@ document.getElementById('gatePw').addEventListener('keydown', e => { if (e.key =
 document.getElementById('logoutBtn') && (document.getElementById('logoutBtn').onclick = () => { Store.adminLogout(); location.reload(); });
 if (Store.isAdmin()) showApp();
 
-/* ---------- STATE ---------- */
-let state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sortKey:'createdAt', sortDir:-1, page:1, per:10, view:'dashboard' };
 
 /* ---------- CHROME + NAV ---------- */
 async function boot() {
