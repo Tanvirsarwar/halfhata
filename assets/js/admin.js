@@ -1,8 +1,7 @@
-/* ============ Admin (Fully Error-Guarded & Supabase Synced) ============ */
+/* ============ Admin Panel (Fully Restored & Error-Insulated) ============ */
 if (typeof Store !== 'undefined' && Store.seed) { Store.seed(); }
 
 const statusPill = { 'Pending':'pill-amber','On Courier':'pill-blue','Delivered':'pill-green','Cancelled':'pill-red' };
-const statusColor = { 'Pending':'#b7791f','On Courier':'#2563eb','Delivered':'#16a34a','Cancelled':'#dc2626' };
 const payColor = { 'Cash on Delivery':'#6b7280','Partial Paid':'#2563eb','Full Paid':'#16a34a' };
 const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 const fmtTime = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
@@ -10,12 +9,11 @@ const fmtTime = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', mo
 /* ---------- STATE MANAGEMENT ---------- */
 let state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sortKey:'createdAt', sortDir:-1, page:1, per:10, view:'dashboard' };
 
-/* ---------- AUTHENTICATION & LOGIN GATE ---------- */
+/* ---------- AUTHENTICATION GATE ---------- */
 async function tryLogin() {
   const gatePwEl = document.getElementById('gatePw');
   if (!gatePwEl) return;
-  const pw = gatePwEl.value;
-  if (typeof Store !== 'undefined' && await Store.adminLogin(pw)) { showApp(); }
+  if (typeof Store !== 'undefined' && await Store.adminLogin(gatePwEl.value)) { showApp(); }
   else { 
     const gateHintEl = document.getElementById('gateHint');
     if (gateHintEl) gateHintEl.innerHTML = '<b style="color:var(--red)">Wrong password. Try again.</b>'; 
@@ -29,7 +27,7 @@ function showApp() {
   refreshCurrent();
 }
 
-/* ---------- SYSTEM CORE INTERFACE CONTROLLERS ---------- */
+/* ---------- NAVIGATION CONTROLLER ---------- */
 function renderNav() {
   const navs = [
     { id:'dashboard', label:'Dashboard', ic:'chart' },
@@ -55,21 +53,24 @@ function renderNav() {
   });
 }
 
-// Fixed core streamer to cleanly pull from your initialized client layer
+/* ---------- SUPABASE DATABASE LINK CONTROLLER ---------- */
 async function getLiveOrders() {
-  // Use the pre-warmed client variable or window reference inside your supabase.js code
-  let clientInstance = null;
-  if (typeof sb !== 'undefined') { clientInstance = sb; }
-  else if (window.SB && window.SB.getClient) { clientInstance = window.SB.getClient(); }
-  else if (window.supabase && typeof window.supabase.from === 'function') { clientInstance = window.supabase; }
+  let db = null;
   
-  if (!clientInstance) {
-    console.warn("Supabase driver not initialized yet. Falling back to empty dataset.");
+  // Look for the initialized Supabase client across common project variables
+  if (typeof sb !== 'undefined') { db = sb; }
+  else if (window.sb) { db = window.sb; }
+  else if (window.SB && window.SB.client) { db = window.SB.client; }
+  else if (window.SB && typeof window.SB.getClient === 'function') { db = window.SB.getClient(); }
+  else if (typeof supabase !== 'undefined' && typeof supabase.from === 'function') { db = supabase; }
+
+  if (!db) {
+    console.error("Database initialization instance not found.");
     return [];
   }
 
   try {
-    const { data: cloudOrders, error } = await clientInstance
+    const { data: cloudOrders, error } = await db
       .from('orders')
       .select('*, order_items(*)')
       .order('created_at', { ascending: false });
@@ -97,11 +98,10 @@ async function getLiveOrders() {
         price: Number(it.price) || 0,
         size: it.size || 'M',
         qty: Number(it.qty) || 1
-      })),
-      timeline: [{ status: 'Placed', at: o.created_at, note: 'Cloud Synced' }]
+      }))
     }));
   } catch (err) {
-    console.error("Supabase link processing error:", err);
+    console.error("Failed to read from live database view:", err);
     return [];
   }
 }
@@ -115,7 +115,7 @@ async function updateAlerts() {
   }
 }
 
-/* ---------- VIEW: DASHBOARD CONTROLLERS ---------- */
+/* ---------- VIEW: DASHBOARD ---------- */
 async function renderDashboard() {
   const list = await getLiveOrders();
   const pending = list.filter(o => o.status === 'Pending');
@@ -126,11 +126,8 @@ async function renderDashboard() {
   if (sideContactEl && typeof HH !== 'undefined') {
     sideContactEl.innerHTML = `<div class="muted">Phone: ${HH.phone || ''}<br>Email: ${HH.email || ''}</div>`;
   }
-  
-  const hintPanel = document.getElementById('dashHint');
-  if (hintPanel) hintPanel.style.display = list.length === 0 ? 'block' : 'none';
 
-  // ABSOLUTE SAFETY GUARDS ADDED HERE: Checks if elements exist before setting innerHTML
+  // Updates layout containers safely only if they are present in your HTML markup
   const kpis = document.getElementById('kpis');
   if (kpis && typeof money === 'function') {
     kpis.innerHTML = `
@@ -142,16 +139,6 @@ async function renderDashboard() {
   
   const revTotal = document.getElementById('revTotal');
   if (revTotal && typeof money === 'function') revTotal.textContent = `Total: ${money(revenue)}`;
-
-  const chartRevEl = document.getElementById('chartRevenue');
-  if (chartRevEl) {
-    chartRevEl.innerHTML = `<div style="padding:20px;font-weight:500;color:var(--muted)">Delighted to serve: ${delivered.length} finalized direct items.</div>`;
-  }
-
-  const chartStatEl = document.getElementById('chartStatus');
-  if (chartStatEl) {
-    chartStatEl.innerHTML = `<div class="summary-stat-box">Pending: <b>${pending.length}</b> · Shipped: <b>${list.filter(o => o.status==='On Courier').length}</b></div>`;
-  }
   
   const activity = document.getElementById('activity');
   if (activity) {
@@ -167,7 +154,7 @@ async function renderDashboard() {
   }
 }
 
-/* ---------- VIEW: ORDERS CONTROLLERS ---------- */
+/* ---------- VIEW: ORDERS ---------- */
 async function renderOrders() {
   const allOrders = await getLiveOrders();
   
@@ -228,7 +215,7 @@ async function renderOrders() {
   }
 }
 
-/* ---------- VIEW: PRODUCTS & CATALOG CONTROLLERS ---------- */
+/* ---------- VIEW: PRODUCTS ---------- */
 function renderProducts() {
   if (typeof Store === 'undefined') return;
   const prods = Store.getProducts();
@@ -256,11 +243,11 @@ function renderProducts() {
       <td>0</td>
       <td>৳0</td>
       <td><span class="pill ${p.active ? 'pill-green' : 'pill-red'}">${p.active ? 'Active' : 'Disabled'}</span></td>
-      <td><button class="btn btn-light btn-sm" onclick="alert('Product editing runs via context config arrays')">Edit</button></td>
+      <td><button class="btn btn-light btn-sm" onclick="alert('Product layout locked to cache array configs')">Edit</button></td>
     </tr>`).join('');
 }
 
-/* ---------- VIEW: CUSTOMERS CONTROLLERS ---------- */
+/* ---------- VIEW: CUSTOMERS ---------- */
 async function renderCustomers() {
   const orders = await getLiveOrders();
   const map = {};
@@ -274,13 +261,13 @@ async function renderCustomers() {
 
   const list = Object.values(map);
   const countSpan = document.getElementById('custCount');
-  if (countSpan) countSpan.textContent = `${list.length} buyers recorded`;
+  if (countSpan) countSpan.textContent = list.length;
 
   const tbody = document.getElementById('custBody');
   if (!tbody) return;
 
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty">No orders parsed yet to index customer data.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">No customer orders recorded yet.</td></tr>';
     return;
   }
 
@@ -296,29 +283,27 @@ async function renderCustomers() {
     </tr>`).join('');
 }
 
-/* ---------- DRAWER MANAGEMENT PANEL ---------- */
+/* ---------- RECORD DRAWER MANAGEMENT ---------- */
 async function openDrawer(uuid) {
-  let clientInstance = null;
-  if (typeof sb !== 'undefined') { clientInstance = sb; }
-  else if (window.SB && window.SB.getClient) { clientInstance = window.SB.getClient(); }
-  else if (window.supabase && typeof window.supabase.from === 'function') { clientInstance = window.supabase; }
+  let db = null;
+  if (typeof sb !== 'undefined') { db = sb; }
+  else if (window.sb) { db = window.sb; }
+  else if (window.SB && window.SB.client) { db = window.SB.client; }
+  else if (window.SB && typeof window.SB.getClient === 'function') { db = window.SB.getClient(); }
+  else if (typeof supabase !== 'undefined' && typeof supabase.from === 'function') { db = supabase; }
   
-  if (!clientInstance) return;
+  if (!db) return;
   
-  const { data: o, error } = await clientInstance
+  const { data: o, error } = await db
     .from('orders')
     .select('*, order_items(*)')
     .eq('id', uuid)
     .single();
 
-  if (error || !o) {
-    if (typeof toast === 'function') toast('Could not download complete order parameters');
-    return;
-  }
+  if (error || !o) return;
 
   const overlayEl = document.getElementById('overlay'); if (overlayEl) overlayEl.classList.add('show');
-  const drawerEl = document.getElementById('drawer');
-  if (!drawerEl) return;
+  const drawerEl = document.getElementById('drawer'); if (!drawerEl) return;
 
   const orderIdText = o.order_no || o.id.slice(0,8);
   const safeEsc = val => typeof esc === 'function' ? esc(val) : val;
@@ -361,7 +346,7 @@ async function openDrawer(uuid) {
   
   document.querySelectorAll('[data-status]').forEach(b => b.onclick = async () => {
     const nextStatus = b.dataset.status;
-    const { error: patchError } = await clientInstance
+    const { error: patchError } = await db
       .from('orders')
       .update({ status: nextStatus })
       .eq('id', uuid);
@@ -377,26 +362,18 @@ async function openDrawer(uuid) {
 }
 
 function closeDrawer(){ 
-  const overlayEl = document.getElementById('overlay');
-  if (overlayEl) overlayEl.classList.remove('show'); 
+  const overlayEl = document.getElementById('overlay'); if (overlayEl) overlayEl.classList.remove('show'); 
 }
 
 const overlayEl = document.getElementById('overlay');
-if (overlayEl) {
-  overlayEl.addEventListener('click', e => { if (e.target.id === 'overlay') closeDrawer(); });
-}
+if (overlayEl) overlayEl.addEventListener('click', e => { if (e.target.id === 'overlay') closeDrawer(); });
 
 function refreshCurrent(){ 
-  ({ 
-    dashboard: renderDashboard, 
-    orders: renderOrders, 
-    products: renderProducts, 
-    customers: renderCustomers 
-  }[state.view] || (()=>{}))(); 
+  ({ dashboard: renderDashboard, orders: renderOrders, products: renderProducts, customers: renderCustomers }[state.view] || (()=>{}))(); 
   updateAlerts(); 
 }
 
-/* INTERACTION ELEMENT LISTENERS */
+/* EVENT ELEMENT LISTENERS */
 document.getElementById('globalSearch')?.addEventListener('input', e => { state.search = e.target.value; state.page = 1; refreshCurrent(); });
 document.getElementById('tblSearch')?.addEventListener('input', e => { state.search = e.target.value; state.page = 1; renderOrders(); });
 document.getElementById('fStatus')?.addEventListener('change', e => { state.status = e.target.value; state.page = 1; renderOrders(); });
