@@ -85,5 +85,21 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="assets/js/supabase.js"></script>
   <script src="assets/js/landing.js"></script>
+  <script>
+    async function initStorefront() {
+      if (window.SB && SB.ready) {
+        // 1. Download fresh entries from Supabase 
+        await SB.loadCatalog(); 
+      }
+      
+      // 2. Refresh the UI elements that depend on local catalog cache
+      if (typeof renderCatalog === 'function') renderCatalog();
+      if (typeof renderProducts === 'function') renderProducts();
+      if (typeof initHome === 'function') initHome(); // runs landing.js logic if available
+    }
+
+    // Boot up the system on page load
+    window.addEventListener('DOMContentLoaded', initStorefront);
+  </script>
 </body>
 </html>
