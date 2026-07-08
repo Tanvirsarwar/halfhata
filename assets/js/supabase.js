@@ -76,8 +76,8 @@ window.SB = {
     if (error) console.error('add category', error);
     await this.loadCatalog();
   }, 
-   
- async createCloudOrder(orderPayload, itemsArray) {
+     
+  async createCloudOrder(orderPayload, itemsArray) {
     if (!sb) return { ok: false, error: 'Cloud client uninitialized' };
     try {
       // Step A: Insert the master order row
@@ -88,7 +88,7 @@ window.SB = {
 
       if (orderError) throw orderError;
       if (!orderData || orderData.length === 0) throw new Error('Database failed to return an order reference ID');
-      
+        
       const newOrderId = orderData[0].id;
 
       // Step B: Map your individual shopping cart items to this fresh Order ID
@@ -115,19 +115,21 @@ window.SB = {
       return { ok: false, error: err.message || err };
     }
   }  
+}; // This closes window.SB properly!
 
-  // Universal Auth State Check
-if (typeof window !== 'undefined') {
-  if (window.supabaseClient) {
-    window.supabaseClient.auth.getSession().then(function(res) {
-      var session = res.data ? res.data.session : null;
-      if (session && session.user) {
-        // Safe check for profile data without crashing
-        var profile = session.user.user_metadata || {};
-        console.log("Session verified for:", session.user.email);
-      }
-    }).catch(function(err) {
-      console.log("No active session found.");
-    });
+// Now we safely execute the profile authentication guard structure out here:
+(function() {
+  if (typeof window !== 'undefined') {
+    var activeClient = window.supabaseClient || sb;
+    if (activeClient && activeClient.auth) {
+      activeClient.auth.getSession().then(function(res) {
+        var session = res.data ? res.data.session : null;
+        if (session && session.user) {
+          console.log("Session verified for:", session.user.email);
+        }
+      }).catch(function(err) {
+        console.log("Handled native fallback auth routing safely.");
+      });
+    }
   }
-}
+})();
