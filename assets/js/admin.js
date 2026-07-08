@@ -1,13 +1,17 @@
 /* ============ HALFHATA — Production Admin Dashboard Client ============ */
 
-// 1. Direct Client Configuration using your verified database credentials
+// 1. Direct Client Configuration with persistSession set to false to prevent client collisions
 const ADMIN_SUPABASE_URL = "https://mjycdnpjcffofoiuenle.supabase.co"; 
 const ADMIN_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qeWNkbnBqY2Zmb2ZvaXVlbmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwMDcsImV4cCI6MjA5ODkwOTAwN30.TjF994SLeKtuEo9V6AjrgccDzprvzcxLZCPDVvYfp5E";
 
 var dbInstance = null;
 try {
   if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
-    dbInstance = window.supabase.createClient(ADMIN_SUPABASE_URL, ADMIN_SUPABASE_KEY);
+    dbInstance = window.supabase.createClient(ADMIN_SUPABASE_URL, ADMIN_SUPABASE_KEY, {
+      auth: {
+        persistSession: false // Prevents the "Multiple GoTrueClient instances" console warning
+      }
+    });
   }
 } catch(e) {
   console.error("Direct connection fallback initialization error:", e);
