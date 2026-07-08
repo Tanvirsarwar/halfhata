@@ -116,10 +116,18 @@ window.SB = {
     }
   }  
 
-  async removeCategory(name) {
-    if (!sb) return;
-    const { error } = await sb.from('categories').delete().eq('name', name);
-    if (error) console.error('remove category', error);
-    await this.loadCatalog();
-  },
-};
+  // Universal Auth State Check
+if (typeof window !== 'undefined') {
+  if (window.supabaseClient) {
+    window.supabaseClient.auth.getSession().then(function(res) {
+      var session = res.data ? res.data.session : null;
+      if (session && session.user) {
+        // Safe check for profile data without crashing
+        var profile = session.user.user_metadata || {};
+        console.log("Session verified for:", session.user.email);
+      }
+    }).catch(function(err) {
+      console.log("No active session found.");
+    });
+  }
+}
