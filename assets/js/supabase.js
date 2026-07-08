@@ -123,9 +123,14 @@ window.SB = {
     var activeClient = window.supabaseClient || sb;
     if (activeClient && activeClient.auth) {
       activeClient.auth.getSession().then(function(res) {
-        var session = res.data ? res.data.session : null;
+        // Ensure data and session exist before looking for user properties
+        var session = (res && res.data) ? res.data.session : null;
         if (session && session.user) {
           console.log("Session verified for:", session.user.email);
+          // If your app expects a profile object, mock it defensively if missing
+          if (typeof window.profile === 'undefined') {
+            window.profile = session.user.user_metadata || {};
+          }
         }
       }).catch(function(err) {
         console.log("Handled native fallback auth routing safely.");
