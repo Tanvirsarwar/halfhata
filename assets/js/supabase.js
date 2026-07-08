@@ -20,6 +20,13 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const sb = window.supabaseClient || window.supabaseInstance || (window.supabase ? window.supabase.createClient(SB_URL, SB_ANON) : null);
 const _slug = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
+// FIX: publish the single instance so every other script (admin.js in particular)
+// reuses this exact client instead of calling createClient() again. Calling
+// createClient() more than once per page is what triggers Supabase's
+// "Multiple GoTrueClient instances detected" console warning and wastes a
+// duplicate auth listener.
+if (typeof window !== 'undefined') window.supabaseClient = sb;
+
 window.SB = {
   ready: !!sb,
 
@@ -122,7 +129,33 @@ window.SB = {
       console.error('Supabase Transaction Error:', err);
       return { ok: false, error: err.message || err };
     }
-  }  
+  },
+
+  // FIX: real cloud admin authentication. Previously the "Admin Login" gate
+  // only checked a password hash in localStorage — it never signed in to
+  // Supabase Auth, so every admin.js query ran as the anonymous `anon` role.
+  // schema.sql's RLS policies (e.g. `orders for select using (... or is_admin())`)
+  // check auth.uid() server-side, so an unauthenticated anon request always
+  // gets zero rows back — no error, just silently empty tables forever.
+  // These two calls make the admin gate a real Supabase Auth session so
+  // is_admin() actually resolves true and RLS lets the data through.
+  async adminSignIn(email, password) {
+    if (!sb) return { ok:false, error:'Cloud client not initialized' };
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) return { ok:false, error: error.message };
+
+    const { data: profile, error: profErr } = await sb
+      .from('profiles').select('is_admin').eq('id', data.user.id).single();
+    if (profErr || !profile || !profile.is_admin) {
+      await sb.auth.signOut();
+      return { ok:false, error:'This account is not authorized as an admin.' };
+    }
+    return { ok:true };
+  },
+
+  async adminSignOut() {
+    if (sb) await sb.auth.signOut();
+  }
 };
 
 // Defensive authentication handler

@@ -1,22 +1,5 @@
 /* ============ HALFHATA — Production Admin Dashboard Client ============ */
 
-// 1. Direct Client Configuration with persistSession set to false to prevent client collisions
-const ADMIN_SUPABASE_URL = "https://mjycdnpjcffofoiuenle.supabase.co"; 
-const ADMIN_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qeWNkbnBqY2Zmb2ZvaXVlbmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwMDcsImV4cCI6MjA5ODkwOTAwN30.TjF994SLeKtuEo9V6AjrgccDzprvzcxLZCPDVvYfp5E";
-
-var dbInstance = null;
-try {
-  if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
-    dbInstance = window.supabase.createClient(ADMIN_SUPABASE_URL, ADMIN_SUPABASE_KEY, {
-      auth: {
-        persistSession: false // Prevents the "Multiple GoTrueClient instances" console warning
-      }
-    });
-  }
-} catch(e) {
-  console.error("Direct connection fallback initialization error:", e);
-}
-
 if (typeof Store !== 'undefined' && Store.seed) { Store.seed(); }
 
 var statusPill = { 'Pending':'pill-amber','On Courier':'pill-blue','Delivered':'pill-green','Cancelled':'pill-red' };
@@ -24,35 +7,84 @@ var payColor = { 'Cash on Delivery':'#6b7280','Partial Paid':'#2563eb','Full Pai
 var fmtDate = function(iso) { return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); };
 var fmtTime = function(iso) { return new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); };
 
-// FIX: raw DB values like "on_courier" need underscore->space + per-word capitalization,
-// not just capitalizing the first character of the whole string.
+// FIX: raw DB values like "on_courier" need underscore->space + per-word
+// capitalization, not just capitalizing the first character of the whole
+// string ("on_courier" was becoming "On_courier", which never matched the
+// 'On Courier' key in statusPill or any status filter value).
 var fmtStatus = function(raw) {
   if (!raw) return 'Pending';
   return raw.split('_').map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
 };
 
-var state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sortKey:'createdAt', sortDir:-1, page:1, per:10, view:'dashboard' };
+var state = { search:'', status:'', page:1, per:10, view:'dashboard' };
 
+// FIX: reuse the single client supabase.js already created and published as
+// window.supabaseClient, instead of calling createClient() a second time.
+// Two separate clients on one page is what caused the "Multiple GoTrueClient
+// instances" console warning, and meant admin.js's auth session lived in a
+// completely different client than the one supabase.js/checkout.js use.
+function getActiveClient() {
+  if (window.supabaseClient) return window.supabaseClient;
+  if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
+    console.warn('window.supabaseClient was not set by supabase.js — falling back to a fresh client. Check script load order in admin.html.');
+    return window.supabase.createClient(
+      "https://mjycdnpjcffofoiuenle.supabase.co",
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qeWNkbnBqY2Zmb2ZvaXVlbmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwMDcsImV4cCI6MjA5ODkwOTAwN30.TjF994SLeKtuEo9V6AjrgccDzprvzcxLZCPDVvYfp5E"
+    );
+  }
+  return null;
+}
+
+// FIX (root cause of "orders never show up"): the old gate only checked a
+// password hash locally — it never created a real Supabase Auth session.
+// schema.sql's RLS policy on `orders` is
+//   "select using (user_id = auth.uid() or is_admin())"
+// which needs an authenticated session where profiles.is_admin = true.
+// Without it, every query silently returns zero rows (no error) no matter
+// how correct the rendering code is. tryLogin() now signs in for real.
 function tryLogin() {
-  var gatePwEl = document.getElementById('gatePw');
-  if (!gatePwEl) return;
-  
-  if (typeof Store !== 'undefined' && typeof Store.adminLogin === 'function') {
-    Store.adminLogin(gatePwEl.value).then(function(isValid) {
-      if (isValid) { showApp(); } else { showLoginError(); }
+  var emailEl = document.getElementById('gateEmail');
+  var pwEl = document.getElementById('gatePw');
+  if (!pwEl) return;
+
+  var email = emailEl ? emailEl.value.trim() : '';
+  var pw = pwEl.value;
+
+  setGateLoading(true);
+
+  if (typeof window.SB !== 'undefined' && typeof window.SB.adminSignIn === 'function' && email) {
+    window.SB.adminSignIn(email, pw).then(function(res) {
+      setGateLoading(false);
+      if (res.ok) { showApp(); } else { showLoginError(res.error); }
     }).catch(function() {
-      if (gatePwEl.value === 'admin' || gatePwEl.value === 'halfhataadmin') { showApp(); } else { showLoginError(); }
+      setGateLoading(false);
+      showLoginError('Could not reach the authentication service.');
     });
-  } else if (gatePwEl.value === 'admin' || gatePwEl.value === 'halfhataadmin') {
-    showApp();
+    return;
+  }
+
+  // Fallback ONLY if the cloud auth helper isn't available (e.g. Supabase
+  // script failed to load) — keeps local dev/testing possible, but real
+  // admin data (orders) will still be empty under this path since it's not
+  // an authenticated Supabase session.
+  setGateLoading(false);
+  if (typeof Store !== 'undefined' && typeof Store.adminLogin === 'function') {
+    Store.adminLogin(pw).then(function(isValid) {
+      if (isValid) { showApp(); } else { showLoginError('Wrong password.'); }
+    });
   } else {
-    showLoginError();
+    showLoginError('Enter your admin email and password.');
   }
 }
 
-function showLoginError() {
+function setGateLoading(loading) {
+  var btn = document.getElementById('gateBtn');
+  if (btn) { btn.disabled = loading; btn.textContent = loading ? 'Signing in…' : 'Login'; }
+}
+
+function showLoginError(msg) {
   var gateHintEl = document.getElementById('gateHint');
-  if (gateHintEl) gateHintEl.innerHTML = '<b style="color:red">Wrong password. Try again.</b>';
+  if (gateHintEl) gateHintEl.innerHTML = '<b style="color:red">' + (msg || 'Wrong password. Try again.') + '</b>';
 }
 
 function showApp() {
@@ -63,17 +95,32 @@ function showApp() {
   refreshCurrent();
 }
 
+function logout() {
+  var client = getActiveClient();
+  var afterLogout = function() {
+    var appEl = document.getElementById('app'); if (appEl) appEl.style.display = 'none';
+    var gateEl = document.getElementById('gate'); if (gateEl) gateEl.style.display = 'flex';
+    var pwEl = document.getElementById('gatePw'); if (pwEl) pwEl.value = '';
+  };
+  if (client && client.auth) { client.auth.signOut().then(afterLogout).catch(afterLogout); }
+  else afterLogout();
+}
+
 function renderNav() {
+  // FIX: every nav item used the same 📦 emoji regardless of section, even
+  // though store.js already ships distinct icons (dashboard/orders/tag/users)
+  // via the ic() helper.
   var navs = [
-    { id:'dashboard', label:'Dashboard', ic:'chart' },
-    { id:'orders', label:'Orders', ic:'package' },
-    { id:'products', label:'Products', ic:'shirt' },
-    { id:'customers', label:'Customers', ic:'user' },
+    { id:'dashboard', label:'Dashboard', icon:'dashboard' },
+    { id:'orders', label:'Orders', icon:'orders' },
+    { id:'products', label:'Products', icon:'tag' },
+    { id:'customers', label:'Customers', icon:'users' },
   ];
   var sideNavEl = document.getElementById('sideNav');
   if (sideNavEl) {
     sideNavEl.innerHTML = navs.map(function(n) {
-      return '<button class="nav-item ' + (state.view === n.id ? 'active' : '') + '" data-view="' + n.id + '">📦 <span>' + n.label + '</span></button>';
+      var iconHtml = (typeof ic === 'function') ? ic(n.icon, 18) : '';
+      return '<button class="nav-item ' + (state.view === n.id ? 'active' : '') + '" data-view="' + n.id + '">' + iconHtml + ' <span>' + n.label + '</span></button>';
     }).join('');
   }
 
@@ -88,13 +135,6 @@ function renderNav() {
   });
 }
 
-function getActiveClient() {
-  if (dbInstance) return dbInstance;
-  if (window.supabaseClient) return window.supabaseClient;
-  if (window.SB && window.SB.ready) return window.supabase;
-  return null;
-}
-
 function getLiveOrders() {
   var client = getActiveClient();
   if (!client) return Promise.resolve([]);
@@ -105,7 +145,7 @@ function getLiveOrders() {
     .order('created_at', { ascending: false })
     .then(function(res) {
       if (res.error || !res.data) throw res.error;
-      
+
       return res.data.map(function(o) {
         return {
           id: o.order_no || o.id.slice(0, 8),
@@ -139,33 +179,11 @@ function getLiveOrders() {
     });
 }
 
-function updateAlerts() {
-  // NOTE: #bellBtn doesn't exist anywhere in the redesigned admin.html (no
-  // header/bell element was carried over), so this is a no-op by design now.
-  // Left in place in case a bell element is reintroduced later.
-  getLiveOrders().then(function(list) {
-    var pendingCount = list.filter(function(o) { return o.status === 'Pending'; }).length;
-    var bell = document.getElementById('bellBtn');
-    if (bell) {
-      bell.innerHTML = '🔔' + (pendingCount > 0 ? '<span class="notif-badge">' + pendingCount + '</span>' : '');
-    }
-  });
-}
-
-// FIX: #sideContact existed in admin.html (sidebar "Contact & Payment" box)
-// but nothing ever populated it.
-function renderSideContact() {
-  var el = document.getElementById('sideContact');
-  if (!el || typeof HH === 'undefined') return;
-  el.innerHTML = (HH.channels || []).map(function(c) {
-    return `<div style="font-size:12px;margin-top:4px"><b style="color:${c.color}">${c.label}</b>: ${c.number}</div>`;
-  }).join('');
-}
-
 function renderDashboard() {
-  // FIX: admin.html no longer has separate #kpis / #activity elements — the
-  // redesigned markup only exposes a single #dashContent container. Both
-  // pieces now render into that one container instead of silently no-oping.
+  // FIX: admin.html's redesigned markup only exposes a single #dashContent
+  // container (the old #kpis / #activity elements are gone). Both pieces
+  // now render into that one container using the .kpis/.kpi classes that
+  // already exist (and are already styled) in styles.css.
   getLiveOrders().then(function(list) {
     var dashContent = document.getElementById('dashContent');
     if (!dashContent) return;
@@ -175,23 +193,24 @@ function renderDashboard() {
     var revenue = delivered.reduce(function(sum, o) { return sum + o.total; }, 0);
 
     var kpiHtml = `
-      <div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
-        <div class="card card-summary"><h3>৳${revenue}</h3><span class="muted">Delivered Revenue</span></div>
-        <div class="card card-summary"><h3>${list.length}</h3><span class="muted">Lifetime Orders</span></div>
-        <div class="card card-summary"><h3>${pending.length}</h3><span class="muted">Pending Review</span></div>
+      <div class="kpis">
+        <div class="kpi"><div class="lbl">Delivered Revenue</div><div class="val">৳${revenue}</div></div>
+        <div class="kpi"><div class="lbl">Lifetime Orders</div><div class="val">${list.length}</div></div>
+        <div class="kpi"><div class="lbl">Pending Review</div><div class="val">${pending.length}</div></div>
       </div>`;
 
     var activityHtml = !pending.length
       ? '<div class="empty">All clear! No orders pending review.</div>'
       : pending.slice(0, 5).map(function(o) {
           return `
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #f2f1ef">
+            <div class="act-row" style="justify-content:space-between">
               <div><b>#${o.id}</b> by <b>${o.customer.name}</b> (${o.customer.city})</div>
               <button class="btn btn-light btn-sm" onclick="openDrawer('${o.rawUuid}')">Process</button>
             </div>`;
         }).join('');
 
-    dashContent.innerHTML = kpiHtml + '<h3 style="margin:0 0 8px">Needs Attention</h3><div class="card">' + activityHtml + '</div>';
+    dashContent.innerHTML = kpiHtml +
+      '<div class="panel"><div class="panel-head"><b>Needs Attention</b></div>' + activityHtml + '</div>';
   });
 }
 
@@ -215,8 +234,8 @@ function renderOrderFilters() {
   });
 }
 
-// FIX: #orderPager existed in admin.html but was never populated — no way to
-// move between pages of orders.
+// FIX: #orderPager existed in admin.html but was never populated — no way
+// to move between pages of orders.
 function renderPager(totalCount) {
   var pager = document.getElementById('orderPager');
   if (!pager) return;
@@ -245,8 +264,8 @@ function renderOrders() {
 
     if (searchVal) {
       var q = searchVal.toLowerCase();
-      f = f.filter(function(o) { 
-        return o.id.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.phone.includes(q); 
+      f = f.filter(function(o) {
+        return o.id.toLowerCase().includes(q) || o.customer.name.toLowerCase().includes(q) || o.customer.phone.includes(q);
       });
     }
     if (statusVal) f = f.filter(function(o) { return o.status === statusVal; });
@@ -283,6 +302,13 @@ function renderOrders() {
   });
 }
 
+/* ---------------- Products ---------------- */
+
+// FIX: the row template's <td> order didn't match the table's <th> order at
+// all — Category showed the price, Price showed the size list, and there
+// was never a "Media" cell despite that being the first column header. The
+// Action button also just alert()'d instead of doing anything, even though
+// window.SB already has working createProducts/updateProduct/deleteProduct.
 function renderProducts() {
   var tbody = document.getElementById('prodBody');
   if (!tbody) return;
@@ -294,25 +320,114 @@ function renderProducts() {
     .then(function(res) {
       var prods = res.data || [];
       var countSpan = document.getElementById('prodCount');
-      if (countSpan) countSpan.textContent = prods.length;
+      if (countSpan) countSpan.textContent = prods.length + ' total active items';
 
       if (!prods.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty">No products found in catalog.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No products found in catalog.</td></tr>';
         return;
       }
 
       tbody.innerHTML = prods.map(function(p) {
+        var mediaCell = p.image
+          ? `<img class="media-thumb" src="${p.image}" alt="">`
+          : `<div class="media-thumb empty">No img</div>`;
         return `
           <tr>
+            <td>${mediaCell}</td>
             <td><b>${p.name}</b><br><small class="muted">${p.id}</small></td>
             <td>${p.category || 'Uncategorized'}</td>
             <td><b>৳${p.price}</b></td>
-            <td>${(p.sizes || []).join(', ')}</td>
             <td><span class="pill ${p.active ? 'pill-green' : 'pill-red'}">${p.active ? 'Active' : 'Disabled'}</span></td>
-            <td><button class="btn btn-light btn-sm" onclick="alert('Use primary catalog editor to modify structural records.')">Fixed</button></td>
+            <td style="display:flex;gap:6px">
+              <button class="btn btn-light btn-sm" data-edit="${p.id}">Edit</button>
+              <button class="btn btn-light btn-sm" data-del="${p.id}">Delete</button>
+            </td>
           </tr>`;
       }).join('');
+
+      tbody.querySelectorAll('[data-edit]').forEach(function(b) {
+        b.onclick = function() {
+          var p = prods.find(function(x) { return x.id === b.dataset.edit; });
+          if (p) openProductDrawer(p);
+        };
+      });
+      tbody.querySelectorAll('[data-del]').forEach(function(b) {
+        b.onclick = function() {
+          if (!confirm('Delete this product? This cannot be undone.')) return;
+          window.SB.deleteProduct(b.dataset.del).then(function() { renderProducts(); });
+        };
+      });
     });
+}
+
+function openProductDrawer(existing) {
+  var overlayEl = document.getElementById('overlay'); if (overlayEl) overlayEl.classList.add('show');
+  var drawerEl = document.getElementById('drawer'); if (!drawerEl) return;
+
+  var sizesAll = (typeof HH !== 'undefined' && HH.sizes) ? HH.sizes : ['S','M','L','XL','XXL'];
+  var p = existing || { name:'', category:'', price:'', sizes:['M','L','XL'], active:true, image:null };
+
+  drawerEl.innerHTML = `
+    <div class="drawer-header" style="display:flex;justify-content:space-between;padding:16px;border-bottom:1px solid #e5e7eb">
+      <h2>${existing ? 'Edit Product' : 'Add Product'}</h2>
+      <button class="close-btn" id="closeDrawer" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="drawer-body prod-drawer" style="padding:16px">
+      <div class="field"><label>Name</label><input id="pfName" value="${p.name || ''}"></div>
+      <div class="field"><label>Category</label><input id="pfCategory" value="${p.category || ''}"></div>
+      <div class="field"><label>Price (৳)</label><input id="pfPrice" type="number" value="${p.price || ''}"></div>
+      <div class="field">
+        <label>Sizes</label>
+        <div class="sizes-row">
+          ${sizesAll.map(function(s) {
+            var checked = (p.sizes || []).includes(s) ? 'checked' : '';
+            return `<label class="sizechk"><input type="checkbox" value="${s}" ${checked}> ${s}</label>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="field"><label>Design image</label><input id="pfImage" type="file" accept="image/*"></div>
+      <div class="field"><label><input type="checkbox" id="pfActive" ${p.active !== false ? 'checked' : ''}> Active (visible in store)</label></div>
+      <button class="btn btn-dark btn-block" id="pfSave">${existing ? 'Save Changes' : 'Create Product'}</button>
+    </div>`;
+
+  document.getElementById('closeDrawer').onclick = closeDrawer;
+
+  document.getElementById('pfSave').onclick = async function() {
+    var saveBtn = document.getElementById('pfSave');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+
+    var sizes = Array.from(drawerEl.querySelectorAll('.sizechk input:checked')).map(function(i) { return i.value; });
+    var name = document.getElementById('pfName').value.trim();
+    if (!name) { alert('Product name is required.'); saveBtn.disabled = false; saveBtn.textContent = existing ? 'Save Changes' : 'Create Product'; return; }
+
+    var imageFile = document.getElementById('pfImage').files[0];
+    var imageDataUrl = p.image || null;
+    if (imageFile) {
+      imageDataUrl = await resizeImage(imageFile);
+    }
+
+    var payload = {
+      name: name,
+      category: document.getElementById('pfCategory').value.trim(),
+      price: Number(document.getElementById('pfPrice').value) || 0,
+      sizes: sizes,
+      image: imageDataUrl,
+      active: document.getElementById('pfActive').checked,
+    };
+
+    try {
+      if (existing) {
+        await window.SB.updateProduct(existing.id, payload);
+      } else {
+        await window.SB.createProducts([payload]);
+      }
+      closeDrawer();
+      renderProducts();
+    } catch (e) {
+      alert('Could not save product: ' + (e && e.message || e));
+      saveBtn.disabled = false; saveBtn.textContent = existing ? 'Save Changes' : 'Create Product';
+    }
+  };
 }
 
 function renderCustomers() {
@@ -328,6 +443,14 @@ function renderCustomers() {
     var list = Object.values(map);
     var tbody = document.getElementById('custBody');
     if (!tbody) return;
+
+    var countEl = document.getElementById('custCount');
+    if (countEl) countEl.textContent = list.length + ' buyers cataloged';
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">No customers found yet.</td></tr>';
+      return;
+    }
 
     tbody.innerHTML = list.map(function(c) {
       return `
@@ -346,7 +469,7 @@ function renderCustomers() {
 function openDrawer(uuid) {
   var client = getActiveClient();
   if (!client) return;
-  
+
   client.from('orders').select('*, order_items(*)').eq('id', uuid).single()
     .then(function(res) {
       var o = res.data;
@@ -358,13 +481,13 @@ function openDrawer(uuid) {
       var orderIdText = o.order_no || o.id.slice(0,8);
 
       drawerEl.innerHTML = `
-        <div class="drawer-header" style="display:flex;justify-content:between;padding:16px;border-bottom:1px solid #e5e7eb">
+        <div class="drawer-header" style="display:flex;justify-content:space-between;padding:16px;border-bottom:1px solid #e5e7eb">
           <div><h2>Order #${orderIdText}</h2><small class="muted">${fmtTime(o.created_at)}</small></div>
           <button class="close-btn" id="closeDrawer" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>
         </div>
         <div class="drawer-body" style="padding:16px">
           <div class="dgroup" style="margin-bottom:16px"><strong>Status Controls</strong>
-            <div style="display:flex;gap:6px;margin-top:8px">
+            <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
               <button class="btn btn-sm btn-light" data-status="pending">Pending</button>
               <button class="btn btn-sm btn-light" data-status="on_courier">Ship</button>
               <button class="btn btn-sm btn-light" data-status="delivered">Deliver</button>
@@ -382,7 +505,7 @@ function openDrawer(uuid) {
         </div>`;
 
       document.getElementById('closeDrawer').onclick = closeDrawer;
-      
+
       document.querySelectorAll('[data-status]').forEach(function(b) {
         b.onclick = function() {
           var nextStatus = b.dataset.status;
@@ -391,6 +514,8 @@ function openDrawer(uuid) {
               if (!patchRes.error) {
                 closeDrawer();
                 refreshCurrent();
+              } else {
+                alert('Could not update status: ' + patchRes.error.message);
               }
             });
         };
@@ -398,23 +523,36 @@ function openDrawer(uuid) {
     });
 }
 
-function closeDrawer(){ 
-  var overlayEl = document.getElementById('overlay'); if (overlayEl) overlayEl.classList.remove('show'); 
+function closeDrawer(){
+  var overlayEl = document.getElementById('overlay'); if (overlayEl) overlayEl.classList.remove('show');
 }
 
-function refreshCurrent(){ 
-  ({ dashboard: renderDashboard, orders: renderOrders, products: renderProducts, customers: renderCustomers }[state.view] || function(){})(); 
-  updateAlerts(); 
+function refreshCurrent(){
+  ({ dashboard: renderDashboard, orders: renderOrders, products: renderProducts, customers: renderCustomers }[state.view] || function(){})();
+}
+
+// FIX: populates #sideContact, which existed in admin.html but nothing ever
+// wrote into it.
+function renderSideContact() {
+  var el = document.getElementById('sideContact');
+  if (!el || typeof HH === 'undefined') return;
+  el.innerHTML = (HH.channels || []).map(function(c) {
+    return `<div class="r"><b style="color:${c.color}">${c.label}</b><small>${c.number}</small></div>`;
+  }).join('');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
   var gateBtnEl = document.getElementById('gateBtn'); if (gateBtnEl) gateBtnEl.onclick = tryLogin;
   var gatePwEl = document.getElementById('gatePw'); if (gatePwEl) gatePwEl.onkeydown = function(e) { if (e.key === 'Enter') tryLogin(); };
+  var gateEmailEl = document.getElementById('gateEmail'); if (gateEmailEl) gateEmailEl.onkeydown = function(e) { if (e.key === 'Enter') tryLogin(); };
 
   // FIX: was listening on #tblSearch, which no longer exists — the search
-  // input in admin.html is #orderSearch. #fStatus is now built dynamically
-  // by renderOrderFilters() and wired there instead.
+  // input in admin.html is #orderSearch. #fStatus is built dynamically by
+  // renderOrderFilters() and wired there instead.
   document.getElementById('orderSearch')?.addEventListener('input', function(e) { state.search = e.target.value; state.page = 1; renderOrders(); });
+
+  var logoutBtn = document.getElementById('logoutBtn'); if (logoutBtn) logoutBtn.onclick = logout;
+  var addProductBtn = document.getElementById('btnAddProduct'); if (addProductBtn) addProductBtn.onclick = function() { openProductDrawer(null); };
 
   refreshCurrent();
 });
