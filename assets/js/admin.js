@@ -24,6 +24,13 @@ var payColor = { 'Cash on Delivery':'#6b7280','Partial Paid':'#2563eb','Full Pai
 var fmtDate = function(iso) { return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); };
 var fmtTime = function(iso) { return new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); };
 
+// FIX: raw DB values like "on_courier" need underscore->space + per-word capitalization,
+// not just capitalizing the first character of the whole string.
+var fmtStatus = function(raw) {
+  if (!raw) return 'Pending';
+  return raw.split('_').map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
+};
+
 var state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sortKey:'createdAt', sortDir:-1, page:1, per:10, view:'dashboard' };
 
 function tryLogin() {
@@ -52,6 +59,7 @@ function showApp() {
   var gateEl = document.getElementById('gate'); if (gateEl) gateEl.style.display = 'none';
   var appEl = document.getElementById('app'); if (appEl) appEl.style.display = 'flex';
   renderNav();
+  renderSideContact();
   refreshCurrent();
 }
 
@@ -102,7 +110,7 @@ function getLiveOrders() {
         return {
           id: o.order_no || o.id.slice(0, 8),
           rawUuid: o.id,
-          status: o.status ? (o.status.charAt(0).toUpperCase() + o.status.slice(1)) : 'Pending',
+          status: fmtStatus(o.status),
           createdAt: o.created_at,
           total: Number(o.total) || 0,
           subtotal: Number(o.subtotal) || 0,
@@ -132,6 +140,9 @@ function getLiveOrders() {
 }
 
 function updateAlerts() {
+  // NOTE: #bellBtn doesn't exist anywhere in the redesigned admin.html (no
+  // header/bell element was carried over), so this is a no-op by design now.
+  // Left in place in case a bell element is reintroduced later.
   getLiveOrders().then(function(list) {
     var pendingCount = list.filter(function(o) { return o.status === 'Pending'; }).length;
     var bell = document.getElementById('bellBtn');
@@ -141,48 +152,96 @@ function updateAlerts() {
   });
 }
 
+// FIX: #sideContact existed in admin.html (sidebar "Contact & Payment" box)
+// but nothing ever populated it.
+function renderSideContact() {
+  var el = document.getElementById('sideContact');
+  if (!el || typeof HH === 'undefined') return;
+  el.innerHTML = (HH.channels || []).map(function(c) {
+    return `<div style="font-size:12px;margin-top:4px"><b style="color:${c.color}">${c.label}</b>: ${c.number}</div>`;
+  }).join('');
+}
+
 function renderDashboard() {
+  // FIX: admin.html no longer has separate #kpis / #activity elements — the
+  // redesigned markup only exposes a single #dashContent container. Both
+  // pieces now render into that one container instead of silently no-oping.
   getLiveOrders().then(function(list) {
+    var dashContent = document.getElementById('dashContent');
+    if (!dashContent) return;
+
     var pending = list.filter(function(o) { return o.status === 'Pending'; });
     var delivered = list.filter(function(o) { return o.status === 'Delivered'; });
     var revenue = delivered.reduce(function(sum, o) { return sum + o.total; }, 0);
 
-    var kpis = document.getElementById('kpis');
-    if (kpis) {
-      kpis.innerHTML = `
+    var kpiHtml = `
+      <div class="kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">
         <div class="card card-summary"><h3>৳${revenue}</h3><span class="muted">Delivered Revenue</span></div>
         <div class="card card-summary"><h3>${list.length}</h3><span class="muted">Lifetime Orders</span></div>
         <div class="card card-summary"><h3>${pending.length}</h3><span class="muted">Pending Review</span></div>
-      `;
-    }
-    
-    var activity = document.getElementById('activity');
-    if (activity) {
-      if (!pending.length) {
-        activity.innerHTML = '<div class="empty">All clear! No orders pending review.</div>';
-      } else {
-        activity.innerHTML = pending.slice(0, 5).map(function(o) {
+      </div>`;
+
+    var activityHtml = !pending.length
+      ? '<div class="empty">All clear! No orders pending review.</div>'
+      : pending.slice(0, 5).map(function(o) {
           return `
             <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #f2f1ef">
               <div><b>#${o.id}</b> by <b>${o.customer.name}</b> (${o.customer.city})</div>
               <button class="btn btn-light btn-sm" onclick="openDrawer('${o.rawUuid}')">Process</button>
             </div>`;
         }).join('');
-      }
-    }
+
+    dashContent.innerHTML = kpiHtml + '<h3 style="margin:0 0 8px">Needs Attention</h3><div class="card">' + activityHtml + '</div>';
   });
 }
 
-function renderOrders() {
-  getLiveOrders().then(function(allOrders) {
-    var thead = document.getElementById('thead');
-    if (thead) {
-      thead.innerHTML = '<tr><th>Order Ref</th><th>Recipient</th><th>City / Region</th><th>Status</th><th>Method</th><th>Total Bill</th><th>Action</th></tr>';
-    }
+// FIX: builds the status-filter control inside #orderFiltersLayout, which
+// existed in admin.html but nothing ever rendered into it before.
+function renderOrderFilters() {
+  var box = document.getElementById('orderFiltersLayout');
+  if (!box) return;
+  if (box.dataset.built === '1') return; // build once, reuse on every re-render
 
+  var statuses = ['Pending', 'On Courier', 'Delivered', 'Cancelled'];
+  box.innerHTML = `
+    <select id="fStatus" class="btn btn-light btn-sm">
+      <option value="">All Statuses</option>
+      ${statuses.map(function(s) { return `<option value="${s}">${s}</option>`; }).join('')}
+    </select>`;
+  box.dataset.built = '1';
+
+  document.getElementById('fStatus').addEventListener('change', function(e) {
+    state.status = e.target.value; state.page = 1; renderOrders();
+  });
+}
+
+// FIX: #orderPager existed in admin.html but was never populated — no way to
+// move between pages of orders.
+function renderPager(totalCount) {
+  var pager = document.getElementById('orderPager');
+  if (!pager) return;
+
+  var totalPages = Math.max(1, Math.ceil(totalCount / state.per));
+  if (state.page > totalPages) state.page = totalPages;
+
+  pager.innerHTML = `
+    <button class="btn btn-light btn-sm" id="pagePrev" ${state.page <= 1 ? 'disabled' : ''}>← Prev</button>
+    <span class="muted">Page ${state.page} of ${totalPages}</span>
+    <button class="btn btn-light btn-sm" id="pageNext" ${state.page >= totalPages ? 'disabled' : ''}>Next →</button>`;
+
+  var prevBtn = document.getElementById('pagePrev');
+  var nextBtn = document.getElementById('pageNext');
+  if (prevBtn) prevBtn.onclick = function() { if (state.page > 1) { state.page--; renderOrders(); } };
+  if (nextBtn) nextBtn.onclick = function() { if (state.page < totalPages) { state.page++; renderOrders(); } };
+}
+
+function renderOrders() {
+  renderOrderFilters();
+
+  getLiveOrders().then(function(allOrders) {
     var f = allOrders;
-    var searchVal = document.getElementById('tblSearch')?.value || state.search;
-    var statusVal = document.getElementById('fStatus')?.value || state.status;
+    var searchVal = document.getElementById('orderSearch')?.value ?? state.search;
+    var statusVal = document.getElementById('fStatus')?.value ?? state.status;
 
     if (searchVal) {
       var q = searchVal.toLowerCase();
@@ -192,11 +251,15 @@ function renderOrders() {
     }
     if (statusVal) f = f.filter(function(o) { return o.status === statusVal; });
 
-    var tbody = document.getElementById('tbody');
+    var orderCountEl = document.getElementById('orderCount');
+    if (orderCountEl) orderCountEl.textContent = f.length + ' total orders match';
+
+    var tbody = document.getElementById('orderBody');
     if (!tbody) return;
 
     if (!f.length) {
       tbody.innerHTML = '<tr><td colspan="7" class="empty">No matching records found.</td></tr>';
+      renderPager(0);
       return;
     }
 
@@ -215,6 +278,8 @@ function renderOrders() {
           <td><button class="btn btn-light btn-sm">Manage</button></td>
         </tr>`;
     }).join('');
+
+    renderPager(f.length);
   });
 }
 
@@ -345,9 +410,11 @@ function refreshCurrent(){
 document.addEventListener('DOMContentLoaded', function() {
   var gateBtnEl = document.getElementById('gateBtn'); if (gateBtnEl) gateBtnEl.onclick = tryLogin;
   var gatePwEl = document.getElementById('gatePw'); if (gatePwEl) gatePwEl.onkeydown = function(e) { if (e.key === 'Enter') tryLogin(); };
-  
-  document.getElementById('tblSearch')?.addEventListener('input', function(e) { state.search = e.target.value; renderOrders(); });
-  document.getElementById('fStatus')?.addEventListener('change', function(e) { state.status = e.target.value; renderOrders(); });
+
+  // FIX: was listening on #tblSearch, which no longer exists — the search
+  // input in admin.html is #orderSearch. #fStatus is now built dynamically
+  // by renderOrderFilters() and wired there instead.
+  document.getElementById('orderSearch')?.addEventListener('input', function(e) { state.search = e.target.value; state.page = 1; renderOrders(); });
 
   refreshCurrent();
 });
