@@ -284,40 +284,18 @@ input,select,textarea{font-family:inherit;font-size:14px}
 .side .logo img{width:66px;height:66px;border-radius:16px;border:1px solid #ffffff1f}
 .side .logo b{font-size:19px;font-weight:800}
 .side nav{display:flex;flex-direction:column;gap:4px;flex:1}
-/* FIX: admin.js renders nav items as <button class="nav-item">, not <a>.
-   Style both selectors identically so the sidebar is no longer invisible
-   black-text-on-black-background. */
-.side nav a,.side nav .nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;font-size:14px;font-weight:500;color:#b7b7bd;text-align:left;width:100%}
-.side nav a:hover,.side nav .nav-item:hover{background:#ffffff0d;color:#fff}
-.side nav a.active,.side nav .nav-item.active{background:#fff;color:var(--black);font-weight:600}
-.side nav a .badge,.side nav .nav-item .badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:99px;display:flex;align-items:center;justify-content:center}
-.side nav .nav-item svg{flex-shrink:0}
+.side nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;font-size:14px;font-weight:500;color:#b7b7bd}
+.side nav a:hover{background:#ffffff0d;color:#fff}
+.side nav a.active{background:#fff;color:var(--black);font-weight:600}
+.side nav a .badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:99px;display:flex;align-items:center;justify-content:center}
 .side .contact{border:1px solid #ffffff1a;border-radius:12px;padding:14px;font-size:12px}
 .side .contact b{display:block;color:#fff;font-size:12px;margin-bottom:10px}
 .side .contact .r{display:flex;align-items:center;gap:9px;margin-bottom:9px}
 .side .contact .r small{display:block;color:#8a8a90;font-size:10px}
-/* logout button sits on the dark sidebar, so give it dark-friendly contrast */
-#logoutBtn{background:#ffffff14;color:#fff;border:1px solid #ffffff26}
-#logoutBtn:hover{background:#ffffff22}
 .main{background:#f7f7f8;min-height:100vh}
 .main .head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 28px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
 .searchbox{flex:1;max-width:520px;display:flex;align-items:center;gap:9px;background:#f3f3f5;border-radius:10px;padding:9px 14px;color:var(--muted)}
 .searchbox input{background:none;border:none;flex:1;outline:none}
-/* FIX: no mobile breakpoint existed for the admin shell — a fixed 248px
-   sidebar plus content left almost no room on phone-width screens. Collapse
-   to a horizontal top nav below 900px. */
-@media(max-width:900px){
-  .admin{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  .side{position:relative;height:auto;flex-direction:row;align-items:center;gap:14px;padding:12px 16px;overflow-x:auto}
-  .side .logo{flex-direction:row;padding:0;gap:8px}
-  .side .logo img{width:36px;height:36px;border-radius:9px}
-  .side nav{flex-direction:row;flex:none}
-  .side nav .nav-item span{display:none}
-  .side .contact,#logoutBtn{display:none}
-}
-/* product-table media thumbnail */
-.media-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--cream-2);display:block}
-.media-thumb.empty{display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:10px}
 .admin-user{display:flex;align-items:center;gap:10px}
 .admin-user img{width:38px;height:38px;border-radius:50%}
 .admin-user b{font-size:14px;display:block}
@@ -404,8 +382,6 @@ tbody tr:hover{background:#fafafa}
 .kpi .val{font-size:28px;font-weight:800;margin-top:8px;letter-spacing:-.02em}
 .kpi .sub{font-size:12px;margin-top:4px;color:var(--muted)}
 .kpi .sub.up{color:var(--green)}
-.kpi .lbl b{font-weight:600;color:var(--ink)}
-.prod-drawer .field{margin-bottom:14px}
 .dash-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:20px}
 @media(max-width:900px){.dash-grid{grid-template-columns:1fr}}
 .admin-body .panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:0}
