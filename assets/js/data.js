@@ -12,7 +12,7 @@ const HH = {
   deliveryCharge: 80,
   codMinAdvance: 120,
   couriers: ['Steadfast', 'Pathao', 'RedX', 'Sundarban', 'Manual'],
-  districts: ['Dhaka','Chattogram','Sylhet','Rajshahi','Khulna','Barishal','Rangpur','Mymensingh','Cumilla','Gazipur','Narayanganj','Bogura'],
+  districts: ['Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapainawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj','Habiganj','Jamalpur','Jashore','Jhalokathi','Jhenaidah','Joypurhat','Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar','Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'],
   sizes: ['S','M','L','XL','XXL'],
 };
 
@@ -39,6 +39,21 @@ const money = n => '৳' + Number(n).toLocaleString('en-IN');
 
 /* product card image: uploaded design photo, or SVG fallback */
 function productMedia(p, w = '74%') {
-  if (p && p.image) return `<img src="${p.image}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:cover">`;
+  const imgs = (p && p.images && p.images.length) ? p.images : (p && p.image ? [p.image] : []);
+  if (imgs.length) {
+    const extra = imgs.length > 1 ? ` class="cycle" data-images='${JSON.stringify(imgs).replace(/'/g, "&#39;")}' data-i="0"` : '';
+    const dots = imgs.length > 1 ? `<span class="img-dots">${imgs.map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</span>` : '';
+    return `<img src="${imgs[0]}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:cover"${extra}>${dots}`;
+  }
   return garment((p && p.type) || 'tee', (p && p.color) || '#141416', w);
 }
+/* click/tap a multi-photo product image to see the next photo */
+document.addEventListener('click', e => {
+  const img = e.target.closest('img.cycle'); if (!img) return;
+  e.preventDefault(); e.stopPropagation();
+  const imgs = JSON.parse(img.dataset.images);
+  const i = (Number(img.dataset.i) + 1) % imgs.length;
+  img.dataset.i = i; img.src = imgs[i];
+  const dots = img.parentElement.querySelectorAll('.img-dots i');
+  dots.forEach((d, k) => d.classList.toggle('on', k === i));
+});
