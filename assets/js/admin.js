@@ -312,17 +312,26 @@ function openProductForm(editId) {
 function renderDesignRows(single) {
   syncDesignInputs();
   document.getElementById('designList').innerHTML = designRows.map((d, i) => `
-    <div class="design-row" data-i="${i}">
-      <div class="design-img" data-pick="${i}">${d.images && d.images.length ? `<img src="${d.images[0]}">${d.images.length>1?`<span class=\"img-count\">${d.images.length}</span>`:''}` : `${ic('plus',18)}<span>Photos</span>`}</div>
-      <div style="flex:1">
-        <input class="d-name" placeholder="Design name (e.g. Abstract Oversized Tee)" value="${esc(d.name)}">
-        <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-          <input class="d-price" type="number" min="0" placeholder="Price ৳" value="${d.price}" style="flex:1">
-          ${(!single && designRows.length > 1) ? `<button class="btn btn-light d-rm" data-rm="${i}" style="padding:8px 10px;color:var(--red)">${ic('x',15)}</button>` : ''}
-        </div>
+    <div class="design-row" data-i="${i}" style="display:block">
+      <input class="d-name" placeholder="Design name (e.g. Abstract Oversized Tee)" value="${esc(d.name)}">
+      <div class="thumbs">
+        ${(d.images || []).map((im, k) => `
+          <span class="thumb-w"><img src="${im}"><button class="t-rm" data-rmimg="${i}:${k}" title="Remove photo">&times;</button>${k===0?'<span class="t-cover">Cover</span>':''}</span>`).join('')}
+        <div class="design-img add-tile" data-pick="${i}">${ic('plus',16)}<span>Add photos</span></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <input class="d-price" type="number" min="0" placeholder="Price ৳" value="${d.price}" style="flex:1">
+        ${(!single && designRows.length > 1) ? `<button class="btn btn-light d-rm" data-rm="${i}" style="padding:8px 10px;color:var(--red)">${ic('x',15)} Remove design</button>` : ''}
       </div>
       <input type="file" accept="image/*" multiple class="d-file" data-file="${i}" hidden>
     </div>`).join('');
+  document.querySelectorAll('.t-rm').forEach(b => b.onclick = e => {
+    e.preventDefault();
+    syncDesignInputs();
+    const [ri, ki] = b.dataset.rmimg.split(':').map(Number);
+    designRows[ri].images.splice(ki, 1);
+    renderDesignRows(single);
+  });
   document.querySelectorAll('.design-img').forEach(el => el.onclick = () => document.querySelector(`[data-file="${el.dataset.pick}"]`).click());
   document.querySelectorAll('.d-file').forEach(inp => inp.onchange = async e => {
     const files = [...e.target.files]; if (!files.length) return;
