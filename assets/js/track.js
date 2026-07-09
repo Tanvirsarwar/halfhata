@@ -34,8 +34,8 @@ function render(o) {
     </div>`;
 }
 
-document.getElementById('go').onclick = () => render(Store.getOrder(document.getElementById('tid').value.trim().replace('#','')));
+document.getElementById('go').onclick = async () => { if (window.SB) await SB.loadOrders(); render(Store.getOrder(document.getElementById('tid').value.trim().replace('#',''))); };
 document.getElementById('tid').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('go').click(); });
 
 const pre = new URLSearchParams(location.search).get('id');
-if (pre) { document.getElementById('tid').value = pre; render(Store.getOrder(pre)); }
+if (pre) { document.getElementById('tid').value = pre; (async () => { if (window.SB) await SB.loadOrders(); render(Store.getOrder(pre)); })(); }

@@ -70,7 +70,7 @@ const Store = (() => {
 
   /* ---- orders ---- */
   const getOrders = () => read(K.orders, []);
-  function nextId() { const n = read(K.seq, 1287) + 1; write(K.seq, n); return 'HALF' + n; }
+  function nextId() { return 'HALF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase(); }
 
   function placeOrder({ customer, payment }) {
     const lines = cartLines();
@@ -98,6 +98,7 @@ const Store = (() => {
       body: `We got order #${order.id}. We'll confirm on WhatsApp shortly. Due on delivery: ${money(total - paid)}.` });
     const orders = getOrders(); orders.unshift(order); write(K.orders, orders);
     clearCart();
+    if (window.SB) SB.pushOrder(order);
     return order;
   }
   const getOrder = id => getOrders().find(o => o.id === id || ('#'+o.id) === id || o.id === id.replace('#',''));
@@ -117,6 +118,7 @@ const Store = (() => {
     // in-account customer notification (production: notifications table + Realtime)
     o.notifications.push({ id:`${o.id}-${o.notifications.length}`, at, title:'Your order is on the way 🚚',
       body:`Order #${o.id} shipped via ${service}. Track ID: ${trackingId}` });
+    if (window.SB) SB.pushOrder(o);
     return updateOrder(id, o);
   }
   function setStatus(id, status) {
@@ -127,6 +129,7 @@ const Store = (() => {
     const nid = () => `${o.id}-${o.notifications.length}`;
     if (status === 'Delivered') o.notifications.push({ id:nid(), at, title:'Delivered ✅', body:`Order #${o.id} has been delivered. Thank you for choosing halfhata!` });
     if (status === 'Cancelled') o.notifications.push({ id:nid(), at, title:'Order cancelled', body:`Order #${o.id} was cancelled. Contact us for a refund of any advance paid.` });
+    if (window.SB) SB.pushOrder(o);
     return updateOrder(id, o);
   }
 

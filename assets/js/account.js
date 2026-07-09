@@ -48,4 +48,4 @@ function render() {
   document.getElementById('logout').onclick = () => { Store.logout(); render(); };
   const mr = document.getElementById('markRead'); if (mr) mr.onclick = () => { Store.markAllRead(); render(); };
 }
-render();
+(async () => { if (window.SB) await SB.loadOrders(); render(); })();

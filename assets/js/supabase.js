@@ -1,20 +1,13 @@
-/* ============ HALFHATA — Supabase connection (Full sync) ============ */
-
-(function() {
-  if (typeof window !== 'undefined') {
-    if (!window.state) window.state = {};
-    if (!window.user) window.user = {};
-    window.profile = window.profile || {};
-  }
-})();
+/* ============ HALFHATA — Supabase connection (Stage 1: products) ============
+   Products, categories and images live in Supabase so every device sees them.
+   Reads are cached into the same localStorage keys the app already uses, so the
+   rest of the app keeps working unchanged. Orders/login come in Stage 2.        */
 
 const SB_URL  = 'https://mjycdnpjcffofoiuenle.supabase.co';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qeWNkbnBqY2Zmb2ZvaXVlbmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwMDcsImV4cCI6MjA5ODkwOTAwN30.TjF994SLeKtuEo9V6AjrgccD0AqeQiALwkGd7JFzYI0';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qeWNkbnBqY2Zmb2ZvaXVlbmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwMDcsImV4cCI6MjA5ODkwOTAwN30.TjF994SLeKtuEo9V6AjrgccDzprvzcxLZCPDVvYfp5E';
 
-const sb = window.supabaseClient || window.supabaseInstance || (window.supabase ? window.supabase.createClient(SB_URL, SB_ANON) : null);
+const sb = window.supabase ? window.supabase.createClient(SB_URL, SB_ANON) : null;
 const _slug = s => (s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
-
-if (typeof window !== 'undefined') window.supabaseClient = sb;
 
 window.SB = {
   ready: !!sb,
@@ -31,7 +24,6 @@ window.SB = {
       else localStorage.setItem('hh_products', JSON.stringify(pRes.data || []));
       if (cRes.error) console.error('load categories', cRes.error);
       else localStorage.setItem('hh_categories', JSON.stringify((cRes.data || []).map(c => c.name)));
-      console.log('✓ Catalog synced from Supabase');
     } catch (e) { console.error('loadCatalog', e); }
   },
 
@@ -53,25 +45,11 @@ window.SB = {
       const image = await this.uploadImage(d.image);
       const row = {
         id: (_slug(d.name) || 'item') + '-' + Math.random().toString(36).slice(2, 6),
-        name: d.name.trim(), 
-        category: d.category || null, 
-        kind: d.kind || 'tshirt',
-        price: Number(d.price) || 0, 
-        sizes: d.sizes || [], 
-        image: image,
-        badge: d.badge || null, 
-        active: true,
-        color: d.color || '#141416',
-        type: d.type || 'tee',
-        created_at: new Date().toISOString()
+        name: d.name.trim(), category: d.category || null, kind: d.kind || 'tshirt',
+        price: Number(d.price) || 0, sizes: d.sizes || [], image, badge: d.badge || null, active: true,
       };
       const { error } = await sb.from('products').insert(row);
-      if (error) { 
-        console.error('insert product', error); 
-        toast('Could not save product: ' + error.message); 
-      } else {
-        console.log('✓ Product created:', d.name);
-      }
+      if (error) { console.error('insert product', error); toast('Could not save product: ' + error.message); }
     }
     await this.loadCatalog();
   },
@@ -81,7 +59,6 @@ window.SB = {
     if (patch.image && String(patch.image).startsWith('data:')) patch.image = await this.uploadImage(patch.image);
     const { error } = await sb.from('products').update(patch).eq('id', id);
     if (error) { console.error('update product', error); toast('Could not update: ' + error.message); }
-    else { console.log('✓ Product updated'); }
     await this.loadCatalog();
   },
 
@@ -89,7 +66,6 @@ window.SB = {
     if (!sb) return;
     const { error } = await sb.from('products').delete().eq('id', id);
     if (error) console.error('delete product', error);
-    else { console.log('✓ Product deleted'); }
     await this.loadCatalog();
   },
 
@@ -98,88 +74,49 @@ window.SB = {
     name = (name || '').trim(); if (!name) return;
     const { error } = await sb.from('categories').upsert({ name });
     if (error) console.error('add category', error);
-    else { console.log('✓ Category added'); }
     await this.loadCatalog();
-  }, 
-      
-  async createCloudOrder(orderPayload, itemsArray) {
-    if (!sb) return { ok: false, error: 'Cloud client uninitialized' };
+  },
+
+  async removeCategory(name) {
+    if (!sb) return;
+    const { error } = await sb.from('categories').delete().eq('name', name);
+    if (error) console.error('remove category', error);
+    await this.loadCatalog();
+  },
+
+  /* ============ Stage 2: ORDERS ============ */
+  /* pull every order from Supabase into the local cache the app already reads */
+  async loadOrders() {
+    if (!sb) return;
     try {
-      const { data: orderData, error: orderError } = await sb
-        .from('orders')
-        .insert([orderPayload])
-        .select();
-
-      if (orderError) throw orderError;
-      if (!orderData || orderData.length === 0) throw new Error('Database failed to return an order reference ID');
-        
-      const newOrderId = orderData[0].id;
-
-      const structuredItems = itemsArray.map(item => ({
-        order_id: newOrderId,
-        product_id: item.id,
-        name: item.name,
-        price: Number(item.price) || 0,
-        size: item.size || 'M',
-        color: item.color || null,
-        qty: Number(item.qty) || 1
+      const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+      if (error) { console.error('load orders', error); return; }
+      const orders = (data || []).map(r => ({
+        id: r.id, createdAt: r.created_at,
+        customer: r.customer || {}, items: r.items || [],
+        subtotal: Number(r.subtotal), delivery: Number(r.delivery), total: Number(r.total),
+        payment: r.payment || {}, status: r.status || 'Pending',
+        courier: r.courier || null,
+        notifications: r.notifications || [], timeline: r.timeline || [],
       }));
-
-      const { error: itemsError } = await sb
-        .from('order_items')
-        .insert(structuredItems);
-
-      if (itemsError) throw itemsError;
-
-      return { ok: true, id: newOrderId };
-    } catch (err) {
-      console.error('Supabase Transaction Error:', err);
-      return { ok: false, error: err.message || err };
-    }
+      localStorage.setItem('hh_orders', JSON.stringify(orders));
+    } catch (e) { console.error('loadOrders', e); }
   },
 
-  /* REAL ADMIN AUTH: Sign in to Supabase Auth + verify is_admin flag */
-  async adminSignIn(email, password) {
-    if (!sb) return { ok:false, error:'Cloud client not initialized' };
-    
-    try {
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) return { ok:false, error: error.message };
-
-      const { data: profile, error: profErr } = await sb
-        .from('profiles').select('is_admin').eq('id', data.user.id).single();
-      
-      if (profErr || !profile || !profile.is_admin) {
-        await sb.auth.signOut();
-        return { ok:false, error:'This account is not authorized as an admin.' };
-      }
-      
-      console.log('✓ Admin signed in successfully');
-      return { ok:true };
-    } catch (e) {
-      console.error('adminSignIn error:', e);
-      return { ok:false, error: e.message };
-    }
+  /* insert or update one order (called after any local change) */
+  async pushOrder(o) {
+    if (!sb || !o) return;
+    const row = {
+      id: o.id, created_at: o.createdAt,
+      customer: o.customer, items: o.items,
+      subtotal: o.subtotal, delivery: o.delivery, total: o.total,
+      payment: o.payment, status: o.status,
+      courier: o.courier, notifications: o.notifications, timeline: o.timeline,
+      user_email: (o.customer && o.customer.email) || null,
+      phone: (o.customer && o.customer.phone) || null,
+    };
+    const { error } = await sb.from('orders').upsert(row);
+    if (error) { console.error('push order', error); toast('⚠ Order could not sync: ' + error.message); return false; }
+    return true;
   },
-
-  async adminSignOut() {
-    if (sb) await sb.auth.signOut();
-  }
 };
-
-/* Check session on load */
-(function() {
-  if (typeof window !== 'undefined') {
-    var activeClient = sb;
-    if (activeClient && activeClient.auth) {
-      activeClient.auth.getSession().then(function(res) {
-        var session = (res && res.data) ? res.data.session : null;
-        if (session && session.user) {
-          console.log("✓ Session verified:", session.user.email);
-        }
-      }).catch(function(err) {
-        console.log("No active session.");
-      });
-    }
-  }
-})();
