@@ -41,19 +41,58 @@ const money = n => '৳' + Number(n).toLocaleString('en-IN');
 function productMedia(p, w = '74%') {
   const imgs = (p && p.images && p.images.length) ? p.images : (p && p.image ? [p.image] : []);
   if (imgs.length) {
-    const extra = imgs.length > 1 ? ` class="cycle" data-images='${JSON.stringify(imgs).replace(/'/g, "&#39;")}' data-i="0"` : '';
+    const dataAttr = ` class="pimg" data-images='${JSON.stringify(imgs).replace(/'/g, "&#39;")}' data-name="${esc(p.name)}"`;
     const dots = imgs.length > 1 ? `<span class="img-dots">${imgs.map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</span>` : '';
-    return `<img src="${imgs[0]}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:cover"${extra}>${dots}`;
+    return `<img src="${imgs[0]}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:cover"${dataAttr}>${dots}`;
   }
   return garment((p && p.type) || 'tee', (p && p.color) || '#141416', w);
 }
-/* click/tap a multi-photo product image to see the next photo */
+
+/* ---- image lightbox: click a product photo to view it big, × to close ---- */
+let _lbImgs = [], _lbI = 0;
+function openLightbox(imgs, name, start = 0) {
+  _lbImgs = imgs; _lbI = start;
+  let lb = document.getElementById('lightbox');
+  if (!lb) {
+    lb = document.createElement('div'); lb.id = 'lightbox'; lb.className = 'lightbox';
+    lb.innerHTML = `
+      <button class="lb-close" aria-label="close">&times;</button>
+      <button class="lb-prev" aria-label="previous">&#8249;</button>
+      <img class="lb-img" alt="">
+      <button class="lb-next" aria-label="next">&#8250;</button>
+      <div class="lb-caption"></div>`;
+    document.body.appendChild(lb);
+    lb.querySelector('.lb-close').onclick = closeLightbox;
+    lb.querySelector('.lb-prev').onclick  = e => { e.stopPropagation(); lbShow(_lbI - 1); };
+    lb.querySelector('.lb-next').onclick  = e => { e.stopPropagation(); lbShow(_lbI + 1); };
+    lb.addEventListener('click', e => { if (e.target === lb) closeLightbox(); });
+    document.addEventListener('keydown', e => {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') lbShow(_lbI - 1);
+      if (e.key === 'ArrowRight') lbShow(_lbI + 1);
+    });
+  }
+  lb.querySelector('.lb-caption').textContent = name || '';
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  lbShow(start);
+}
+function lbShow(i) {
+  const lb = document.getElementById('lightbox'); if (!lb) return;
+  _lbI = (i + _lbImgs.length) % _lbImgs.length;
+  lb.querySelector('.lb-img').src = _lbImgs[_lbI];
+  const multi = _lbImgs.length > 1;
+  lb.querySelector('.lb-prev').style.display = multi ? '' : 'none';
+  lb.querySelector('.lb-next').style.display = multi ? '' : 'none';
+}
+function closeLightbox() {
+  const lb = document.getElementById('lightbox'); if (!lb) return;
+  lb.classList.remove('open');
+  document.body.style.overflow = '';
+}
 document.addEventListener('click', e => {
-  const img = e.target.closest('img.cycle'); if (!img) return;
+  const img = e.target.closest('img.pimg'); if (!img) return;
   e.preventDefault(); e.stopPropagation();
-  const imgs = JSON.parse(img.dataset.images);
-  const i = (Number(img.dataset.i) + 1) % imgs.length;
-  img.dataset.i = i; img.src = imgs[i];
-  const dots = img.parentElement.querySelectorAll('.img-dots i');
-  dots.forEach((d, k) => d.classList.toggle('on', k === i));
+  openLightbox(JSON.parse(img.dataset.images), img.dataset.name || '', 0);
 });
