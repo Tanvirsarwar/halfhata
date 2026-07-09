@@ -419,3 +419,16 @@ tbody tr:hover{background:#fafafa}
 img.cycle{cursor:pointer}
 .design-row .d-name,.design-row .d-price{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px}
 .design-row .d-name:focus,.design-row .d-price:focus{outline:none;border-color:var(--black)}
+
+/* ---- image lightbox ---- */
+.lightbox{position:fixed;inset:0;z-index:400;background:#000d;display:none;align-items:center;justify-content:center;padding:30px}
+.lightbox.open{display:flex}
+.lightbox .lb-img{max-width:92vw;max-height:84vh;border-radius:14px;box-shadow:0 30px 80px #000;object-fit:contain;background:#111}
+.lightbox .lb-close{position:fixed;top:18px;right:22px;width:44px;height:44px;border-radius:50%;background:#ffffff22;color:#fff;font-size:28px;line-height:1;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.lightbox .lb-close:hover{background:#ffffff3a}
+.lightbox .lb-prev,.lightbox .lb-next{position:fixed;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;background:#ffffff22;color:#fff;font-size:30px;line-height:1;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.lightbox .lb-prev{left:18px}.lightbox .lb-next{right:18px}
+.lightbox .lb-prev:hover,.lightbox .lb-next:hover{background:#ffffff3a}
+.lightbox .lb-caption{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);color:#fff;font-weight:600;font-size:15px;text-shadow:0 2px 8px #000}
+img.pimg{cursor:zoom-in}
+@media(max-width:560px){.lightbox{padding:12px}.lightbox .lb-img{max-height:76vh}}
