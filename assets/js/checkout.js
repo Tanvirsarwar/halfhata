@@ -11,8 +11,7 @@ function chrome() {
   document.getElementById('chargedNote').innerHTML = ic('lock', 12) + ' You place the order once payment details are submitted.';
   document.getElementById('ourNumber').textContent = HH.phone;
 
-  document.getElementById('f_district').innerHTML =
-    '<option value="">Select district</option>' + HH.districts.map(d => `<option>${d}</option>`).join('');
+  document.getElementById('districtList').innerHTML = HH.districts.map(d => `<option value="${d}">`).join('');
 
   document.getElementById('payChips').innerHTML = HH.channels.filter(c => c.key !== 'whatsapp')
     .map(c => `<span class="pill" style="background:${c.color}22;color:${c.color}">${c.label}</span>`).join('');
@@ -169,7 +168,7 @@ function validate(showErrors) {
   return ok;
 }
 ['f_name','f_phone','f_city','f_address','f_txn','f_amount'].forEach(id => document.getElementById(id).addEventListener('input', () => { validate(false); updateStep(); }));
-document.getElementById('f_district').addEventListener('change', () => { validate(false); updateStep(); });
+document.getElementById('f_district').addEventListener('input', () => { validate(false); updateStep(); });
 
 /* stepper progress */
 function updateStep() {
