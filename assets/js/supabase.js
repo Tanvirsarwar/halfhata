@@ -39,14 +39,20 @@ window.SB = {
     } catch (e) { console.error('uploadImage', e); return null; }
   },
 
+  async uploadImages(arr) {
+    const out = [];
+    for (const im of (arr || [])) { const u = await this.uploadImage(im); if (u) out.push(u); }
+    return out;
+  },
+
   async createProducts(list) {
     if (!sb) return;
     for (const d of list) {
-      const image = await this.uploadImage(d.image);
+      const images = await this.uploadImages(d.images && d.images.length ? d.images : (d.image ? [d.image] : []));
       const row = {
         id: (_slug(d.name) || 'item') + '-' + Math.random().toString(36).slice(2, 6),
         name: d.name.trim(), category: d.category || null, kind: d.kind || 'tshirt',
-        price: Number(d.price) || 0, sizes: d.sizes || [], image, badge: d.badge || null, active: true,
+        price: Number(d.price) || 0, sizes: d.sizes || [], image: images[0] || null, images, badge: d.badge || null, active: true,
       };
       const { error } = await sb.from('products').insert(row);
       if (error) { console.error('insert product', error); toast('Could not save product: ' + error.message); }
@@ -56,7 +62,8 @@ window.SB = {
 
   async updateProduct(id, patch) {
     if (!sb) return;
-    if (patch.image && String(patch.image).startsWith('data:')) patch.image = await this.uploadImage(patch.image);
+    if (patch.images) { patch.images = await this.uploadImages(patch.images); patch.image = patch.images[0] || null; }
+    else if (patch.image && String(patch.image).startsWith('data:')) patch.image = await this.uploadImage(patch.image);
     const { error } = await sb.from('products').update(patch).eq('id', id);
     if (error) { console.error('update product', error); toast('Could not update: ' + error.message); }
     await this.loadCatalog();
