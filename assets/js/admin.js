@@ -1,4 +1,4 @@
-/* ============ HALFHATA — Production Admin Dashboard Client ============ */
+/* ============ HALFHATA — Production Admin Dashboard Client (Fixed) ============ */
 
 if (typeof Store !== 'undefined' && Store.seed) { Store.seed(); }
 
@@ -7,10 +7,6 @@ var payColor = { 'Cash on Delivery':'#6b7280','Partial Paid':'#2563eb','Full Pai
 var fmtDate = function(iso) { return new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); };
 var fmtTime = function(iso) { return new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }); };
 
-// FIX: raw DB values like "on_courier" need underscore->space + per-word
-// capitalization, not just capitalizing the first character of the whole
-// string ("on_courier" was becoming "On_courier", which never matched the
-// 'On Courier' key in statusPill or any status filter value).
 var fmtStatus = function(raw) {
   if (!raw) return 'Pending';
   return raw.split('_').map(function(w) { return w.charAt(0).toUpperCase() + w.slice(1); }).join(' ');
@@ -18,30 +14,21 @@ var fmtStatus = function(raw) {
 
 var state = { search:'', status:'', page:1, per:10, view:'dashboard' };
 
-// FIX: reuse the single client supabase.js already created and published as
-// window.supabaseClient, instead of calling createClient() a second time.
-// Two separate clients on one page is what caused the "Multiple GoTrueClient
-// instances" console warning, and meant admin.js's auth session lived in a
-// completely different client than the one supabase.js/checkout.js use.
 function getActiveClient() {
   if (window.supabaseClient) return window.supabaseClient;
   if (typeof window.supabase !== 'undefined' && typeof window.supabase.createClient === 'function') {
-    console.warn('window.supabaseClient was not set by supabase.js — falling back to a fresh client. Check script load order in admin.html.');
+    console.warn('window.supabaseClient was not set by supabase.js — falling back to a fresh client.');
     return window.supabase.createClient(
       "https://mjycdnpjcffofoiuenle.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qeWNkbnBqY2Zmb2ZvaXVlbmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwMDcsImV4cCI6MjA5ODkwOTAwN30.TjF994SLeKtuEo9V6AjrgccDzprvzcxLZCPDVvYfp5E"
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1qeWNkbnBqY2Zmb2ZvaXVlbmxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMzMzMwMDcsImV4cCI6MjA5ODkwOTAwN30.TjF994SLeKtuEo9V6AjrgccD0AqeQiALwkGd7JFzYI0"
     );
   }
   return null;
 }
 
-// FIX (root cause of "orders never show up"): the old gate only checked a
-// password hash locally — it never created a real Supabase Auth session.
-// schema.sql's RLS policy on `orders` is
-//   "select using (user_id = auth.uid() or is_admin())"
-// which needs an authenticated session where profiles.is_admin = true.
-// Without it, every query silently returns zero rows (no error) no matter
-// how correct the rendering code is. tryLogin() now signs in for real.
+/* ============ REAL SUPABASE AUTH LOGIN ============
+   This now uses SB.adminSignIn() which calls Supabase Auth + checks is_admin flag.
+   Without this, RLS policies silently block all admin data. */
 function tryLogin() {
   var emailEl = document.getElementById('gateEmail');
   var pwEl = document.getElementById('gatePw');
@@ -50,31 +37,33 @@ function tryLogin() {
   var email = emailEl ? emailEl.value.trim() : '';
   var pw = pwEl.value;
 
+  if (!email || !pw) {
+    showLoginError('Please enter both email and password.');
+    return;
+  }
+
   setGateLoading(true);
 
-  if (typeof window.SB !== 'undefined' && typeof window.SB.adminSignIn === 'function' && email) {
+  if (typeof window.SB !== 'undefined' && typeof window.SB.adminSignIn === 'function') {
     window.SB.adminSignIn(email, pw).then(function(res) {
       setGateLoading(false);
-      if (res.ok) { showApp(); } else { showLoginError(res.error); }
-    }).catch(function() {
+      if (res.ok) { 
+        console.log('✓ Admin login successful');
+        showApp(); 
+      } else { 
+        console.error('Admin login failed:', res.error);
+        showLoginError(res.error); 
+      }
+    }).catch(function(e) {
       setGateLoading(false);
+      console.error('Auth service error:', e);
       showLoginError('Could not reach the authentication service.');
     });
     return;
   }
 
-  // Fallback ONLY if the cloud auth helper isn't available (e.g. Supabase
-  // script failed to load) — keeps local dev/testing possible, but real
-  // admin data (orders) will still be empty under this path since it's not
-  // an authenticated Supabase session.
   setGateLoading(false);
-  if (typeof Store !== 'undefined' && typeof Store.adminLogin === 'function') {
-    Store.adminLogin(pw).then(function(isValid) {
-      if (isValid) { showApp(); } else { showLoginError('Wrong password.'); }
-    });
-  } else {
-    showLoginError('Enter your admin email and password.');
-  }
+  showLoginError('Authentication service not available. Reload the page.');
 }
 
 function setGateLoading(loading) {
@@ -84,7 +73,7 @@ function setGateLoading(loading) {
 
 function showLoginError(msg) {
   var gateHintEl = document.getElementById('gateHint');
-  if (gateHintEl) gateHintEl.innerHTML = '<b style="color:red">' + (msg || 'Wrong password. Try again.') + '</b>';
+  if (gateHintEl) gateHintEl.innerHTML = '<b style="color:red">' + (msg || 'Login failed. Try again.') + '</b>';
 }
 
 function showApp() {
@@ -100,16 +89,18 @@ function logout() {
   var afterLogout = function() {
     var appEl = document.getElementById('app'); if (appEl) appEl.style.display = 'none';
     var gateEl = document.getElementById('gate'); if (gateEl) gateEl.style.display = 'flex';
+    var emailEl = document.getElementById('gateEmail'); if (emailEl) emailEl.value = '';
     var pwEl = document.getElementById('gatePw'); if (pwEl) pwEl.value = '';
+    var gateHint = document.getElementById('gateHint'); if (gateHint) gateHint.textContent = 'Authorized staff only.';
   };
-  if (client && client.auth) { client.auth.signOut().then(afterLogout).catch(afterLogout); }
-  else afterLogout();
+  if (client && client.auth) { 
+    client.auth.signOut().then(afterLogout).catch(afterLogout); 
+  } else {
+    afterLogout();
+  }
 }
 
 function renderNav() {
-  // FIX: every nav item used the same 📦 emoji regardless of section, even
-  // though store.js already ships distinct icons (dashboard/orders/tag/users)
-  // via the ic() helper.
   var navs = [
     { id:'dashboard', label:'Dashboard', icon:'dashboard' },
     { id:'orders', label:'Orders', icon:'orders' },
@@ -174,16 +165,12 @@ function getLiveOrders() {
         };
       });
     }).catch(function(err) {
-      console.error("Dashboard order processing read error:", err);
+      console.error("Orders read error:", err);
       return [];
     });
 }
 
 function renderDashboard() {
-  // FIX: admin.html's redesigned markup only exposes a single #dashContent
-  // container (the old #kpis / #activity elements are gone). Both pieces
-  // now render into that one container using the .kpis/.kpi classes that
-  // already exist (and are already styled) in styles.css.
   getLiveOrders().then(function(list) {
     var dashContent = document.getElementById('dashContent');
     if (!dashContent) return;
@@ -214,12 +201,10 @@ function renderDashboard() {
   });
 }
 
-// FIX: builds the status-filter control inside #orderFiltersLayout, which
-// existed in admin.html but nothing ever rendered into it before.
 function renderOrderFilters() {
   var box = document.getElementById('orderFiltersLayout');
   if (!box) return;
-  if (box.dataset.built === '1') return; // build once, reuse on every re-render
+  if (box.dataset.built === '1') return;
 
   var statuses = ['Pending', 'On Courier', 'Delivered', 'Cancelled'];
   box.innerHTML = `
@@ -234,8 +219,6 @@ function renderOrderFilters() {
   });
 }
 
-// FIX: #orderPager existed in admin.html but was never populated — no way
-// to move between pages of orders.
 function renderPager(totalCount) {
   var pager = document.getElementById('orderPager');
   if (!pager) return;
@@ -302,13 +285,8 @@ function renderOrders() {
   });
 }
 
-/* ---------------- Products ---------------- */
+/* ============ PRODUCTS ============ */
 
-// FIX: the row template's <td> order didn't match the table's <th> order at
-// all — Category showed the price, Price showed the size list, and there
-// was never a "Media" cell despite that being the first column header. The
-// Action button also just alert()'d instead of doing anything, even though
-// window.SB already has working createProducts/updateProduct/deleteProduct.
 function renderProducts() {
   var tbody = document.getElementById('prodBody');
   if (!tbody) return;
@@ -323,7 +301,7 @@ function renderProducts() {
       if (countSpan) countSpan.textContent = prods.length + ' total active items';
 
       if (!prods.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty">No products found in catalog.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty">No products found. Start by adding one!</td></tr>';
         return;
       }
 
@@ -531,8 +509,6 @@ function refreshCurrent(){
   ({ dashboard: renderDashboard, orders: renderOrders, products: renderProducts, customers: renderCustomers }[state.view] || function(){})();
 }
 
-// FIX: populates #sideContact, which existed in admin.html but nothing ever
-// wrote into it.
 function renderSideContact() {
   var el = document.getElementById('sideContact');
   if (!el || typeof HH === 'undefined') return;
@@ -546,9 +522,6 @@ document.addEventListener('DOMContentLoaded', function() {
   var gatePwEl = document.getElementById('gatePw'); if (gatePwEl) gatePwEl.onkeydown = function(e) { if (e.key === 'Enter') tryLogin(); };
   var gateEmailEl = document.getElementById('gateEmail'); if (gateEmailEl) gateEmailEl.onkeydown = function(e) { if (e.key === 'Enter') tryLogin(); };
 
-  // FIX: was listening on #tblSearch, which no longer exists — the search
-  // input in admin.html is #orderSearch. #fStatus is built dynamically by
-  // renderOrderFilters() and wired there instead.
   document.getElementById('orderSearch')?.addEventListener('input', function(e) { state.search = e.target.value; state.page = 1; renderOrders(); });
 
   var logoutBtn = document.getElementById('logoutBtn'); if (logoutBtn) logoutBtn.onclick = logout;
