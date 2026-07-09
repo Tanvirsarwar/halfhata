@@ -37,8 +37,6 @@ async function boot() {
   ];
   document.getElementById('sideNav').innerHTML = nav.map(([i,t,view,badge]) =>
     `<a data-view="${view}" href="#${view}">${ic(i,20)} ${t}${badge?`<span class="badge">${badge}</span>`:''}</a>`).join('');
-  document.getElementById('sideContact').innerHTML = HH.channels.map(c =>
-    `<div class="r"><span style="width:24px;height:24px;border-radius:50%;background:${c.color};display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700">${c.label[0]}</span><div><b style="color:#fff;font-size:11px">${c.label}</b><small>${c.number}</small></div></div>`).join('');
   document.getElementById('topSearchIc').innerHTML = ic('search',18);
   document.getElementById('tblSearchIc').innerHTML = ic('search',16);
   document.getElementById('custSearchIc').innerHTML = ic('search',16);
@@ -275,8 +273,8 @@ let designRows = [];   // [{name, price, image}]
 function openProductForm(editId) {
   const editing = editId ? Store.getProducts().find(p => p.id === editId) : null;
   designRows = editing
-    ? [{ name: editing.name, price: editing.price, image: editing.image }]
-    : [{ name:'', price:'', image:null }];
+    ? [{ name: editing.name, price: editing.price, images: (editing.images && editing.images.length ? editing.images.slice() : (editing.image ? [editing.image] : [])) }]
+    : [{ name:'', price:'', images: [] }];
   document.getElementById('overlay').classList.add('show');
   const cats = Store.getCategories();
   const catOpts = cats.map(c => `<option ${editing && editing.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('');
@@ -308,14 +306,14 @@ function openProductForm(editId) {
   renderDesignRows(!!editing);
   document.getElementById('closeDrawer').onclick = closeDrawer;
   const addBtn = document.getElementById('addDesign');
-  if (addBtn) addBtn.onclick = () => { designRows.push({ name:'', price:'', image:null }); renderDesignRows(false); };
+  if (addBtn) addBtn.onclick = () => { designRows.push({ name:'', price:'', images: [] }); renderDesignRows(false); };
   document.getElementById('saveProd').onclick = () => saveProduct(editing);
 }
 function renderDesignRows(single) {
   syncDesignInputs();
   document.getElementById('designList').innerHTML = designRows.map((d, i) => `
     <div class="design-row" data-i="${i}">
-      <div class="design-img" data-pick="${i}">${d.image ? `<img src="${d.image}">` : `${ic('plus',18)}<span>Photo</span>`}</div>
+      <div class="design-img" data-pick="${i}">${d.images && d.images.length ? `<img src="${d.images[0]}">${d.images.length>1?`<span class=\"img-count\">${d.images.length}</span>`:''}` : `${ic('plus',18)}<span>Photos</span>`}</div>
       <div style="flex:1">
         <input class="d-name" placeholder="Design name (e.g. Abstract Oversized Tee)" value="${esc(d.name)}">
         <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
@@ -323,13 +321,17 @@ function renderDesignRows(single) {
           ${(!single && designRows.length > 1) ? `<button class="btn btn-light d-rm" data-rm="${i}" style="padding:8px 10px;color:var(--red)">${ic('x',15)}</button>` : ''}
         </div>
       </div>
-      <input type="file" accept="image/*" class="d-file" data-file="${i}" hidden>
+      <input type="file" accept="image/*" multiple class="d-file" data-file="${i}" hidden>
     </div>`).join('');
   document.querySelectorAll('.design-img').forEach(el => el.onclick = () => document.querySelector(`[data-file="${el.dataset.pick}"]`).click());
   document.querySelectorAll('.d-file').forEach(inp => inp.onchange = async e => {
-    const f = e.target.files[0]; if (!f) return;
-    try { syncDesignInputs(); designRows[+inp.dataset.file].image = await resizeImage(f); renderDesignRows(single); }
-    catch { toast('Could not read that image'); }
+    const files = [...e.target.files]; if (!files.length) return;
+    try {
+      syncDesignInputs();
+      const row = designRows[+inp.dataset.file];
+      for (const f of files) row.images.push(await resizeImage(f));
+      renderDesignRows(single);
+    } catch { toast('Could not read an image'); }
   });
   document.querySelectorAll('.d-rm').forEach(b => b.onclick = () => { syncDesignInputs(); designRows.splice(+b.dataset.rm, 1); renderDesignRows(single); });
 }
@@ -351,15 +353,15 @@ async function saveProduct(editing) {
   const valid = designRows.filter(d => d.name.trim() && Number(d.price) > 0);
   if (!category) return toast('Enter a category');
   if (!valid.length) return toast('Add a design name and price');
-  if (!valid.every(d => d.image) && !editing) { if (!confirm('Some designs have no photo. Publish anyway?')) return; }
+  if (!valid.every(d => d.images && d.images.length) && !editing) { if (!confirm('Some designs have no photo. Publish anyway?')) return; }
   if (window.SB) await SB.addCategory(category); else Store.addCategory(category);
   if (editing) {
     const d = valid[0];
-    const patch = { name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind };
+    const patch = { name:d.name.trim(), price:Number(d.price), images:d.images, category, badge, sizes, kind };
     if (window.SB) await SB.updateProduct(editing.id, patch); else Store.updateProduct(editing.id, patch);
     toast('Product updated');
   } else {
-    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), image:d.image, category, badge, sizes, kind }));
+    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), images:d.images, category, badge, sizes, kind }));
     if (window.SB) await SB.createProducts(list); else list.forEach(x => Store.addProduct(x));
     toast(`${valid.length} ${kind === 'jersey' ? 'jersey' : 'product'}(s) published`);
   }
