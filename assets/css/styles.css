@@ -516,3 +516,11 @@ img.pimg{cursor:zoom-in}
 /* size chart inside product modal */
 .pm-chart-wrap{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
 .pm-chart-title{font-weight:700;font-size:13.5px;margin-bottom:8px}
+
+/* product modal quantity stepper */
+.pm-qty-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.pm-qty-label{font-weight:600;font-size:14px}
+.pm-qty{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:10px;padding:5px 10px}
+.pm-qbtn{width:26px;height:26px;border-radius:7px;font-size:17px;font-weight:700;color:#333;display:flex;align-items:center;justify-content:center;line-height:1}
+.pm-qbtn:hover{background:#f2f1ef}
+.pm-qn{min-width:22px;text-align:center;font-weight:700;font-size:15px}
