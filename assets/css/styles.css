@@ -604,3 +604,12 @@ img.pimg{cursor:zoom-in}
 /* admin custom order preview */
 .adm-design{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:10px}
 .adm-design img{width:100%;max-height:300px;object-fit:contain;background:#f4f3f0}
+
+/* size chart on custom page (dark) */
+.c-chart{margin-top:16px}
+.c-chart-title{font-weight:700;color:#fff;font-size:13.5px;margin-bottom:8px}
+.c-chart-title small{color:#9a9aa2;font-weight:500}
+.sc-table.c-dark th{background:linear-gradient(135deg,#ffd257,#f2802e);color:#1a1408}
+.sc-table.c-dark td{border-bottom:1px solid #ffffff14;color:#ddd}
+.sc-table.c-dark td b{color:#fff}
+.sc-table.c-dark tbody tr:nth-child(even){background:#ffffff08}
