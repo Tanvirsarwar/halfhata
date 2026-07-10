@@ -150,4 +150,20 @@ document.getElementById('cPlace').onclick = async () => {
   location.href = 'success.html?id=' + order.id;
 };
 
-renderTypes(); renderColors(); renderSizes(); refresh();
+/* size chart inside the sizes card (chart follows selected type) */
+function renderCustomChart() {
+  let wrap = document.getElementById('cChart');
+  if (!wrap) {
+    wrap = document.createElement('div'); wrap.id = 'cChart'; wrap.className = 'c-chart';
+    document.getElementById('bulkHint').after(wrap);
+  }
+  const ch = SIZE_CHARTS.tshirt; // Basic & Drop Shoulder use the tee chart
+  wrap.innerHTML = `
+    <div class="c-chart-title">Size Chart <small>(inches)</small></div>
+    <table class="sc-table c-dark">
+      <thead><tr>${ch.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+      <tbody>${ch.rows.map(r => `<tr>${r.map((v,i) => i===0?`<td><b>${v}</b></td>`:`<td>${v}"</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+}
+
+renderTypes(); renderColors(); renderSizes(); renderCustomChart(); refresh();
