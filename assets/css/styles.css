@@ -613,3 +613,9 @@ img.pimg{cursor:zoom-in}
 .sc-table.c-dark td{border-bottom:1px solid #ffffff14;color:#ddd}
 .sc-table.c-dark td b{color:#fff}
 .sc-table.c-dark tbody tr:nth-child(even){background:#ffffff08}
+
+/* forgot password link */
+.au-forgot{display:block;margin:10px auto 0;font-size:13px;font-weight:600;color:var(--muted);text-decoration:underline}
+.au-forgot:hover{color:var(--ink)}
+.custom-page .au-forgot{color:#9a9aa2}
+.custom-page .au-forgot:hover{color:#fff}
