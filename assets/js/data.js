@@ -141,7 +141,15 @@ function openProductModal(id) {
           ${(p.sizes && p.sizes.length ? p.sizes : ['M','L','XL']).map(sz => `<button class="pm-sz" data-sz="${esc(sz)}">${esc(sz)}</button>`).join('')}
         </div>
         <div class="pm-hint" id="pmHint">Please select a size to continue</div>
-        <button class="btn btn-dark btn-block btn-lg" id="pmAdd" ${oos ? 'disabled' : ''}>${oos ? 'Out of Stock' : 'Add to Cart'}</button>
+        <div class="pm-qty-row">
+          <span class="pm-qty-label">Quantity</span>
+          <div class="pm-qty">
+            <button class="pm-qbtn" id="pmMinus">&minus;</button>
+            <span class="pm-qn" id="pmQty">1</span>
+            <button class="pm-qbtn" id="pmPlus">+</button>
+          </div>
+        </div>
+        <button class="btn btn-dark btn-block btn-lg" id="pmAdd" ${oos ? 'disabled' : ''}>${oos ? 'Out of Stock' : `Add to Cart&nbsp; ${ic('cart',18)}`}</button>
         ${(() => { const ch = SIZE_CHARTS[p.kind === 'jersey' ? 'jersey' : 'tshirt']; return `
         <div class="pm-chart-wrap">
           <div class="pm-chart-title">${ch.title}</div>
@@ -156,7 +164,11 @@ function openProductModal(id) {
   m.classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  let chosen = null;
+  let chosen = null, qty = 1;
+  const qEl = document.getElementById('pmQty');
+  const minus = document.getElementById('pmMinus'), plus = document.getElementById('pmPlus');
+  if (minus) minus.onclick = () => { qty = Math.max(1, qty - 1); qEl.textContent = qty; };
+  if (plus)  plus.onclick  = () => { qty = Math.min(20, qty + 1); qEl.textContent = qty; };
   m.querySelector('.pm-close').onclick = closeProductModal;
   m.onclick = e => { if (e.target === m) closeProductModal(); };
   m.querySelectorAll('.pm-sz').forEach(b => b.onclick = () => {
@@ -173,9 +185,9 @@ function openProductModal(id) {
   const add = document.getElementById('pmAdd');
   if (add && !oos) add.onclick = () => {
     if (!chosen) { const h = document.getElementById('pmHint'); h.style.visibility = 'visible'; h.classList.add('shake'); setTimeout(()=>h.classList.remove('shake'),400); return; }
-    Store.addToCart(p.id, { size: chosen });
+    for (let k = 0; k < qty; k++) Store.addToCart(p.id, { size: chosen });
     if (typeof refreshCart === 'function') refreshCart();
-    toast(`Added — ${p.name} (${chosen})`);
+    toast(`Added — ${p.name} (${chosen}) × ${qty}`);
     closeProductModal();
   };
 }
