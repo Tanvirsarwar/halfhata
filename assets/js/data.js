@@ -1,500 +1,254 @@
-/* ============ Admin (multi-view dashboard) ============ */
-Store.seed();
+/* ============ HALFHATA — Brand config + catalogue ============ */
+const HH = {
+  brand: 'halfhata',
+  logo: 'assets/img/logo.jpeg',
+  phone: '0199210064',
+  email: 'halfhata1@gmail.com',
+  channels: [
+    { key: 'whatsapp', label: 'WhatsApp', number: '0199210064', color: '#25d366' },
+    { key: 'nagad',    label: 'Nagad',    number: '0199210064', color: '#ee4d2d' },
+    { key: 'bkash',    label: 'bKash',    number: '0199210064', color: '#e2136e' },
+  ],
+  deliveryCharge: 80,
+  codMinAdvance: 120,
+  couriers: ['Steadfast', 'Pathao', 'RedX', 'Sundarban', 'Manual'],
+  districts: ['Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapainawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj','Habiganj','Jamalpur','Jashore','Jhalokathi','Jhenaidah','Joypurhat','Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar','Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'],
+  sizes: ['S','M','L','XL','XXL','XXXL','XXXXL'],
+};
 
-const statusPill = { 'Pending':'pill-amber','On Courier':'pill-blue','Delivered':'pill-green','Cancelled':'pill-red' };
-const statusColor = { 'Pending':'#b7791f','On Courier':'#2563eb','Delivered':'#16a34a','Cancelled':'#dc2626' };
-const payColor = { 'Cash on Delivery':'#6b7280','Partial Paid':'#2563eb','Full Paid':'#16a34a' };
-const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-const fmtTime = iso => new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
-
-/* ---------- STATE (must be before the login gate auto-runs) ---------- */
-let state = { search:'', status:'', payment:'', courier:'', from:'', to:'', sortKey:'createdAt', sortDir:-1, page:1, per:10, view:'dashboard' };
-
-/* ---------- LOGIN GATE ---------- */
-async function tryLogin() {
-  const pw = document.getElementById('gatePw').value;
-  if (await Store.adminLogin(pw)) { showApp(); }
-  else { document.getElementById('gateHint').innerHTML = '<b style="color:var(--red)">Wrong password. Try again.</b>'; }
+/* SVG garment illustration (no photo dependency) */
+function garment(type, color, w = '74%') {
+  const c = color, sh = shade(color, -18), pr = shade(color, -34);
+  const body = type === 'hoodie'
+    ? `<path d="M60 78 L60 52 Q60 40 74 34 L96 26 Q110 22 128 22 Q146 22 160 26 L182 34 Q196 40 196 52 L196 78 L176 86 L176 168 Q176 176 168 176 L88 176 Q80 176 80 168 L80 86 Z" fill="${c}"/>
+       <path d="M96 26 Q128 54 160 26 L152 40 Q128 62 104 40 Z" fill="${sh}"/>
+       <rect x="112" y="30" width="32" height="70" rx="16" fill="${pr}" opacity=".55"/>`
+    : `<path d="M52 62 L92 34 Q112 26 128 40 Q144 26 164 34 L204 62 L188 92 L172 82 L172 172 Q172 178 166 178 L90 178 Q84 178 84 172 L84 82 L68 92 Z" fill="${c}"/>
+       <path d="M96 34 Q128 60 160 34 L150 46 Q128 66 106 46 Z" fill="${sh}"/>`;
+  const mark = `<text x="128" y="118" text-anchor="middle" font-family="Inter,sans-serif" font-size="17" font-weight="800" fill="${textOn(c)}" opacity=".85">halfhata</text>`;
+  return `<svg class="tee" viewBox="0 0 256 210" style="width:${w}" xmlns="http://www.w3.org/2000/svg">${body}${mark}</svg>`;
 }
-function showApp() {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'grid';
-  boot();
-}
-document.getElementById('gateBtn').onclick = tryLogin;
-document.getElementById('gatePw').addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
-document.getElementById('logoutBtn') && (document.getElementById('logoutBtn').onclick = () => { Store.adminLogout(); location.reload(); });
-if (Store.isAdmin()) showApp();
+function shade(hex, p){let{r,g,b}=hx(hex);const f=t=>Math.max(0,Math.min(255,Math.round(t+(t*p/100))));return `rgb(${f(r)},${f(g)},${f(b)})`;}
+function hx(h){h=h.replace('#','');if(h.length===3)h=[...h].map(x=>x+x).join('');return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
+function textOn(hex){const{r,g,b}=hx(hex.replace('rgb','').match(/[0-9a-fA-F]{3,6}/)?hex:hex);const L=(0.299*r+0.587*g+0.114*b);return L>150?'#1a1a1a':'#f5f5f5';}
 
+/* Products are created by the admin (see Store.getProducts / addProduct).
+   No seed catalogue — the store starts empty until you post t-shirts. */
+const productById = id => Store.getProducts().find(p => p.id === id) || null;
+const money = n => '৳' + Number(n).toLocaleString('en-IN');
 
-/* ---------- CHROME + NAV ---------- */
-async function boot() {
-  if (window.SB) { await SB.loadCatalog(); await SB.loadOrders(); }
-  const nav = [
-    ['dashboard','Dashboard','dashboard'],['orders','Orders','orders'],['box','Products','products'],
-    ['users','Customers','customers'],['tag','Coupons','coupons'],['chart','Reports','dashboard'],
-    ['star','Reviews','reviews'],['bell','Notifications','notifications'],['settings','Settings','settings'],['logout','Logout','logout'],
-  ];
-  document.getElementById('sideNav').innerHTML = nav.map(([i,t,view,badge]) =>
-    `<a data-view="${view}" href="#${view}">${ic(i,20)} ${t}${badge?`<span class="badge">${badge}</span>`:''}</a>`).join('');
-  document.getElementById('topSearchIc').innerHTML = ic('search',18);
-  document.getElementById('tblSearchIc').innerHTML = ic('search',16);
-  document.getElementById('custSearchIc').innerHTML = ic('search',16);
-  document.getElementById('bellBtn').innerHTML = ic('bell',22);
-  document.getElementById('exportBtn').innerHTML = ic('download',16) + ' Export CSV';
-  document.getElementById('custExport').innerHTML = ic('download',16) + ' Export CSV';
-  document.getElementById('fCourier').innerHTML = '<option value="">All Courier</option>' + HH.couriers.map(c => `<option>${c}</option>`).join('');
-
-  document.querySelectorAll('#sideNav a').forEach(a => a.onclick = e => {
-    const v = a.dataset.view;
-    if (v === 'logout') { Store.adminLogout(); location.reload(); return; }
-    e.preventDefault(); switchView(v);
-  });
-
-  document.getElementById('globalSearch').addEventListener('input', e => {
-    state.search = e.target.value;
-    if (state.view === 'orders') { document.getElementById('tblSearch').value = e.target.value; state.page = 1; renderOrders(); }
-    else if (state.view === 'customers') { document.getElementById('custSearch').value = e.target.value; renderCustomers(); }
-    else switchView('orders');
-  });
-
-  wireOrders(); wireProducts(); wireCustomers();
-  switchView(location.hash.replace('#','') || 'dashboard');
-  updateAlerts();
-}
-
-/* real pending-order count on the header bell + sidebar (no fake numbers) */
-function updateAlerts() {
-  const pending = Store.getOrders().filter(o => o.status === 'Pending').length;
-  const bell = document.getElementById('bellBtn');
-  if (bell) bell.innerHTML = ic('bell',22) + (pending
-    ? `<span style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:99px;display:flex;align-items:center;justify-content:center">${pending}</span>` : '');
-  const navA = document.querySelector('#sideNav a[data-view="notifications"]');
-  if (navA) {
-    let b = navA.querySelector('.badge');
-    if (pending) { if (!b) { b = document.createElement('span'); b.className = 'badge'; navA.appendChild(b); } b.textContent = pending; }
-    else if (b) b.remove();
+/* product card image: uploaded design photo, or SVG fallback */
+function productMedia(p, w = '74%') {
+  const imgs = (p && p.images && p.images.length) ? p.images : (p && p.image ? [p.image] : []);
+  if (imgs.length) {
+    const dataAttr = ` class="pimg" data-pid="${esc(p.id)}" data-images='${JSON.stringify(imgs).replace(/'/g, "&#39;")}' data-name="${esc(p.name)}"`;
+    const dots = imgs.length > 1 ? `<span class="img-dots">${imgs.map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</span>` : '';
+    return `<img src="${imgs[0]}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:cover"${dataAttr}>${dots}`;
   }
+  return garment((p && p.type) || 'tee', (p && p.color) || '#141416', w);
 }
 
-function switchView(v) {
-  state.view = v;
-  document.querySelectorAll('.view').forEach(s => s.style.display = 'none');
-  document.querySelectorAll('#sideNav a').forEach(a => a.classList.toggle('active', a.dataset.view === v));
-  const known = ['dashboard','orders','products','customers'];
-  if (known.includes(v)) {
-    document.getElementById('view-' + v).style.display = 'block';
-    ({ dashboard:renderDashboard, orders:renderOrders, products:renderProducts, customers:renderCustomers }[v])();
-  } else if (v === 'settings') {
-    document.getElementById('view-generic').style.display = 'block';
-    document.getElementById('genTitle').textContent = 'Settings';
-    document.getElementById('genCrumb').textContent = 'Dashboard › Settings';
-    document.getElementById('genBody').innerHTML = `
-      <div style="text-align:left">
-        <div class="dgroup"><div class="t">Store</div>
-          <div class="kv"><span>Products</span><b>${Store.getProducts().length}</b></div>
-          <div class="kv"><span>Categories</span><b>${Store.getCategories().length}</b></div>
-          <div class="kv"><span>Orders</span><b>${Store.getOrders().length}</b></div>
-          <div class="kv"><span>Payment numbers</span><b>${esc(HH.phone)}</b></div>
-        </div>
-        <div class="dgroup" style="border-color:#f0c0c0;background:#fff8f8"><div class="t" style="color:var(--red)">Danger zone</div>
-          <p style="font-size:13px;color:var(--muted);margin:0 0 12px">Permanently deletes all products, categories, orders, customers and notifications from this browser. Use it to start completely fresh.</p>
-          <button class="btn" id="resetAll" style="background:var(--red);color:#fff">Reset all data</button>
-        </div>
-        <p class="small" style="color:var(--muted)">In production, security &amp; settings (admin accounts, roles, contact numbers) live in Supabase. See schema.sql and SECURITY.md.</p>
-      </div>`;
-    document.getElementById('resetAll').onclick = () => {
-      if (confirm('Delete ALL data and start fresh? This cannot be undone.')) { Store.resetAllData(); toast('All data cleared'); setTimeout(() => location.reload(), 700); }
-    };
-  } else if (v === 'notifications') {
-    document.getElementById('view-generic').style.display = 'block';
-    document.getElementById('genTitle').textContent = 'Notifications';
-    document.getElementById('genCrumb').textContent = 'Dashboard › Notifications';
-    const pend = Store.getOrders().filter(o => o.status === 'Pending');
-    document.getElementById('genBody').innerHTML = pend.length ? `<div style="text-align:left">
-      <p style="margin-bottom:14px"><b>${pend.length} order(s) waiting for action</b> — assign a courier to ship & notify the customer.</p>
-      ${pend.map(o => `<div class="kv" style="border-bottom:1px solid #f2f1ef;padding:10px 0">
-        <span><b>#${esc(o.id)}</b> · ${esc(o.customer.name)} · ${money(o.total)} <small style="color:var(--muted)">(${esc(o.payment.label)})</small></span>
-        <button class="btn btn-dark" data-view-order="${esc(o.id)}" style="padding:7px 14px">Open</button></div>`).join('')}</div>`
-      : `${ic('checkCircle',34)}<br><br>All caught up — no pending orders.`;
-  } else {
-    document.getElementById('view-generic').style.display = 'block';
-    document.getElementById('genTitle').textContent = v.charAt(0).toUpperCase() + v.slice(1);
-    document.getElementById('genCrumb').textContent = 'Dashboard › ' + v;
-    document.getElementById('genBody').innerHTML = `${ic('box',34)}<br><br>The <b>${esc(v)}</b> section reads from your Supabase tables in the live version.<br>This demo focuses on Dashboard, Orders, Products and Customers.`;
-  }
-}
-
-/* ---------- DASHBOARD ---------- */
-function renderDashboard() {
-  const a = Store.analytics();
-  const hint = document.getElementById('dashHint');
-  if (hint) hint.style.display = (a.orders === 0 && Store.getProducts().length === 0) ? 'block' : 'none';
-  const kpis = [
-    ['wallet','Revenue (gross)', money(a.revenueGross), `${money(a.revenueCollected)} collected · ${money(a.due)} due`],
-    ['orders','Orders', a.orders, `${a.pending} pending · ${a.onCourier} shipping`],
-    ['truck','Delivered', a.delivered, `${a.deliveryRate}% delivery rate`, true],
-    ['chart','Avg. order value', money(a.aov), `${a.customers} customers`],
-  ];
-  document.getElementById('kpis').innerHTML = kpis.map(([i,l,v,s,up]) =>
-    `<div class="kpi"><div class="lbl">${ic(i,15)} ${l}</div><div class="val">${v}</div><div class="sub ${up?'up':''}">${s}</div></div>`).join('');
-
-  const rev = Store.revenueSeries(14);
-  document.getElementById('revTotal').textContent = money(rev.reduce((s,d)=>s+d.value,0));
-  document.getElementById('chartRevenue').innerHTML = svgLineArea(rev);
-
-  const st = Store.statusSplit();
-  document.getElementById('chartStatus').innerHTML = svgDonut(st);
-  document.getElementById('statusLegend').innerHTML = st.map(d =>
-    `<div class="li"><span class="sw" style="background:${statusColor[d.label]}"></span>${d.label}<b>${d.value}</b></div>`).join('');
-
-  document.getElementById('chartPayment').innerHTML = svgBars(
-    Store.paymentSplit().map(d => ({ label: d.label.split(' ')[0], value: d.value })));
-
-  document.getElementById('topProducts').innerHTML = Store.topProducts(5).map((p,i) =>
-    `<div class="top-row"><div class="rk">${i+1}</div><div class="grow">${esc(p.name)}<br><small>${p.qty} sold</small></div><b>${money(p.revenue)}</b></div>`).join('') || '<div class="empty">No sales yet</div>';
-
-  document.getElementById('activity').innerHTML = Store.recentActivity(8).map(x =>
-    `<div class="act-row"><span class="dot" style="background:${statusColor[x.status]||'#141416'}"></span>
-      <span><b>#${esc(x.orderId)}</b> — ${esc(x.name)}</span><span>${esc(x.status)}</span><span class="t">${fmtTime(x.at)}</span></div>`).join('');
-}
-
-/* ---------- ORDERS ---------- */
-function wireOrders() {
-  document.getElementById('tblSearch').addEventListener('input', e => { state.search = e.target.value; state.page = 1; renderOrders(); });
-  document.getElementById('fStatus').addEventListener('change', e => { state.status = e.target.value; state.page = 1; renderOrders(); });
-  document.getElementById('fPayment').addEventListener('change', e => { state.payment = e.target.value; state.page = 1; renderOrders(); });
-  document.getElementById('fCourier').addEventListener('change', e => { state.courier = e.target.value; state.page = 1; renderOrders(); });
-  document.getElementById('fFrom').addEventListener('change', e => { state.from = e.target.value; state.page = 1; renderOrders(); });
-  document.getElementById('fTo').addEventListener('change', e => { state.to = e.target.value; state.page = 1; renderOrders(); });
-  document.getElementById('exportBtn').onclick = exportCSV;
-
-  document.addEventListener('click', e => {
-    const stat = e.target.closest('[data-stat]');
-    if (stat) { const f = stat.dataset.stat; state.status = state.status === f ? '' : f; document.getElementById('fStatus').value = state.status; state.page = 1; renderOrders(); }
-    const th = e.target.closest('th.sortable');
-    if (th) { const k = th.dataset.sort; if (state.sortKey === k) state.sortDir *= -1; else { state.sortKey = k; state.sortDir = 1; } renderOrders(); }
-    const pg = e.target.closest('[data-page]');
-    if (pg && !pg.disabled) { state.page = +pg.dataset.page; renderOrders(); }
-    const v = e.target.closest('[data-view-order]');
-    if (v) openDrawer(v.dataset.viewOrder);
-  });
-}
-function getRows() {
-  let rows = Store.getOrders();
-  const q = state.search.toLowerCase();
-  if (q) rows = rows.filter(o => (o.id + o.customer.name + o.customer.phone).toLowerCase().includes(q));
-  if (state.status)  rows = rows.filter(o => o.status === state.status);
-  if (state.payment) rows = rows.filter(o => o.payment.label === state.payment);
-  if (state.courier) rows = rows.filter(o => o.courier && o.courier.service === state.courier);
-  if (state.from) rows = rows.filter(o => new Date(o.createdAt) >= new Date(state.from));
-  if (state.to)   rows = rows.filter(o => new Date(o.createdAt) <= new Date(state.to + 'T23:59:59'));
-  const key = state.sortKey;
-  rows.sort((a, b) => {
-    let A = key==='amount'?a.total : key==='customer'?a.customer.name : key==='createdAt'?a.createdAt : a[key]||'';
-    let B = key==='amount'?b.total : key==='customer'?b.customer.name : key==='createdAt'?b.createdAt : b[key]||'';
-    return (A < B ? -1 : A > B ? 1 : 0) * state.sortDir;
-  });
-  return rows;
-}
-const OCOLS = [['id','Order ID'],['customer','Customer'],['amount','Amount'],['payment','Payment'],['status','Status'],['createdAt','Date'],['courier','Courier / Tracking'],['action','Action']];
-function renderStats() {
-  const all = Store.getOrders(); const by = s => all.filter(o => o.status === s).length;
-  const cards = [['orders','All Orders',all.length,'#eef','#4b5563',''],['bell','Pending',by('Pending'),'var(--amber-bg)','var(--amber)','Pending'],
-    ['box','On Courier',by('On Courier'),'var(--blue-bg)','var(--blue)','On Courier'],['truck','Delivered',by('Delivered'),'var(--green-bg)','var(--green)','Delivered'],
-    ['x','Cancelled',by('Cancelled'),'var(--red-bg)','var(--red)','Cancelled']];
-  document.getElementById('stats').innerHTML = cards.map(([i,t,n,bg,fg,f]) =>
-    `<div class="stat ${state.status===f&&f?'on':''}" data-stat="${f}"><div class="ic" style="background:${bg};color:${fg}">${ic(i,22)}</div><div><small>${t}</small><b>${n}</b></div></div>`).join('');
-}
-function renderOrders() {
-  renderStats();
-  document.getElementById('thead').innerHTML = OCOLS.map(([k,label]) => {
-    const sortable = !['action','courier','payment'].includes(k);
-    const arw = state.sortKey === k ? (state.sortDir === 1 ? '▲' : '▼') : '';
-    return `<th class="${sortable?'sortable':''}" data-sort="${k}">${label} <span class="arw">${arw}</span></th>`;
-  }).join('');
-  const rows = getRows(), total = rows.length, pages = Math.max(1, Math.ceil(total/state.per));
-  if (state.page > pages) state.page = pages;
-  const slice = rows.slice((state.page-1)*state.per, state.page*state.per);
-  document.getElementById('tbody').innerHTML = slice.length ? slice.map(o => `
-    <tr><td class="oid-cell">#${esc(o.id)}</td><td>${esc(o.customer.name)}</td><td>${money(o.total)}</td>
-      <td>${esc(o.payment.label)}</td><td><span class="pill ${statusPill[o.status]}">${o.status}</span></td>
-      <td>${fmtDate(o.createdAt)}</td>
-      <td class="courier-cell">${o.courier ? `${esc(o.courier.service)}<small>${esc(o.courier.trackingId)}</small>` : '—'}</td>
-      <td><button class="eye" data-view-order="${esc(o.id)}">${ic('eye',18)}</button></td></tr>`).join('')
-    : `<tr><td colspan="8"><div class="empty">No orders match your filters.</div></td></tr>`;
-  const pg = document.getElementById('pager'); const b = [];
-  b.push(`<button ${state.page===1?'disabled':''} data-page="${state.page-1}">‹</button>`);
-  for (let i=1;i<=pages;i++){ if(i===1||i===pages||Math.abs(i-state.page)<=1) b.push(`<button class="${i===state.page?'on':''}" data-page="${i}">${i}</button>`); else if(Math.abs(i-state.page)===2) b.push('<span style="color:var(--muted)">…</span>'); }
-  b.push(`<button ${state.page===pages?'disabled':''} data-page="${state.page+1}">›</button>`);
-  pg.innerHTML = b.join('') + `<span style="margin-left:12px;color:var(--muted);font-size:13px">${total} orders</span>`;
-}
-function exportCSV() {
-  const rows = getRows();
-  const head = ['Order ID','Customer','Phone','District','City','Address','Amount','Paid','Due','Payment','Status','Courier','Tracking ID','Txn ID','Date'];
-  const q = s => `"${String(s??'').replace(/"/g,'""')}"`;
-  const lines = rows.map(o => [o.id,o.customer.name,o.customer.phone,o.customer.district,o.customer.city,o.customer.address,o.total,o.payment.paid,o.payment.due,o.payment.label,o.status,o.courier?.service||'',o.courier?.trackingId||'',o.payment.txnId||'',fmtDate(o.createdAt)].map(q).join(','));
-  download(`halfhata-orders-${Date.now()}.csv`, [head.join(','), ...lines].join('\n'));
-  toast(`Exported ${rows.length} orders`);
-}
-function download(name, text) {
-  const blob = new Blob([text], { type:'text/csv' }); const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
-}
-
-/* ---------- PRODUCTS ---------- */
-function wireProducts() {
-  document.getElementById('prodSearchIc').innerHTML = ic('search',16);
-  document.getElementById('addProdBtn').innerHTML = ic('plus',16) + ' Add Product';
-  document.getElementById('manageCatsBtn').innerHTML = ic('tag',16) + ' Categories';
-  document.getElementById('prodSearch').addEventListener('input', renderProducts);
-  document.getElementById('addProdBtn').onclick = () => openProductForm(null);
-  document.getElementById('manageCatsBtn').onclick = openCategoryManager;
-  document.getElementById('prodBody').addEventListener('click', async e => {
-    const st = e.target.closest('[data-stock]');
-    if (st) {
-      const p = Store.getProducts().find(x => x.id === st.dataset.stock);
-      const newVal = p && p.in_stock === false ? true : false;   // flip
-      if (window.SB) await SB.updateProduct(st.dataset.stock, { in_stock: newVal });
-      else Store.updateProduct(st.dataset.stock, { in_stock: newVal });
-      toast(newVal ? 'Back in stock' : 'Marked out of stock');
-      renderProducts(); return;
-    }
-    const ed = e.target.closest('[data-edit-prod]'); if (ed) openProductForm(ed.dataset.editProd);
-    const dl = e.target.closest('[data-del-prod]');
-    if (dl) { const p = Store.getProducts().find(x => x.id === dl.dataset.delProd);
-      if (confirm(`Delete "${p?.name}"? This can't be undone.`)) { if (window.SB) await SB.deleteProduct(dl.dataset.delProd); else Store.deleteProduct(dl.dataset.delProd); toast('Product deleted'); renderProducts(); } }
-  });
-}
-function renderProducts() {
-  const q = (document.getElementById('prodSearch').value || '').toLowerCase();
-  const tp = {}; Store.topProducts(999).forEach(p => tp[p.id] = p);
-  const all = Store.getProducts();
-  const rows = all.filter(p => (p.name + ' ' + (p.category||'')).toLowerCase().includes(q));
-  document.getElementById('prodCount').textContent = all.length;
-  document.getElementById('prodBody').innerHTML = rows.length ? rows.map(p => {
-    const s = tp[p.id] || { qty:0, revenue:0 };
-    const badgeCls = p.badge==='New'?'pill-blue':p.badge==='Best Seller'?'pill-green':'pill-grey';
-    return `<tr>
-      <td><div style="display:flex;align-items:center;gap:10px">
-        <div style="width:44px;height:44px;border-radius:8px;overflow:hidden;background:var(--cream-2);display:flex;align-items:center;justify-content:center">${productMedia(p,'80%')}</div>
-        <b>${esc(p.name)}</b>${p.kind==='jersey'?'<span class="pill pill-grey" style="margin-left:2px">Jersey</span>':''}</div></td>
-      <td>${esc(p.category||'—')}</td><td>${money(p.price)}</td><td>${s.qty}</td><td>${money(s.revenue)}</td>
-      <td><span class="pill ${badgeCls}">${esc(p.badge||'Active')}</span></td>
-      <td style="white-space:nowrap">
-        <button class="pill ${p.in_stock === false ? 'pill-red' : 'pill-green'}" data-stock="${esc(p.id)}" title="Toggle stock" style="cursor:pointer;border:none;margin-right:8px">${p.in_stock === false ? 'Out of Stock' : 'In Stock'}</button>
-        <button class="eye" data-edit-prod="${esc(p.id)}" title="Edit">${ic('settings',16)}</button>
-        <button class="eye" data-del-prod="${esc(p.id)}" title="Delete" style="color:var(--red);margin-left:6px">${ic('x',16)}</button>
-      </td></tr>`;
-  }).join('') : `<tr><td colspan="7"><div class="empty">No products yet. Click <b>Add Product</b> to post your first t-shirt.</div></td></tr>`;
-}
-
-/* ----- Add / Edit product form (supports multiple designs when adding) ----- */
-let designRows = [];   // [{name, price, image}]
-function openProductForm(editId) {
-  const editing = editId ? Store.getProducts().find(p => p.id === editId) : null;
-  designRows = editing
-    ? [{ name: editing.name, price: editing.price, description: editing.description || '', images: (editing.images && editing.images.length ? editing.images.slice() : (editing.image ? [editing.image] : [])) }]
-    : [{ name:'', price:'', description:'', images: [] }];
-  document.getElementById('overlay').classList.add('show');
-  const cats = Store.getCategories();
-  const catOpts = cats.map(c => `<option ${editing && editing.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('');
-  const badgeOpts = ['','New','Best Seller'].map(b => `<option value="${b}" ${editing && (editing.badge||'')===b ? 'selected':''}>${b || 'No badge'}</option>`).join('');
-  const sizeChecks = HH.sizes.map(sz => {
-    const on = editing ? (editing.sizes||[]).includes(sz) : ['M','L','XL'].includes(sz);
-    return `<label class="sizechk"><input type="checkbox" value="${sz}" ${on?'checked':''}> ${sz}</label>`;
-  }).join('');
-  document.getElementById('drawer').innerHTML = `
-    <div class="dh"><h3>${editing ? 'Edit product' : 'Add new t-shirt'}</h3><button class="close" id="closeDrawer">${ic('x',18)}</button></div>
-    <div class="dgroup"><div class="t">Product type</div>
-      <div class="sizes-row">
-        <label class="sizechk"><input type="radio" name="pKind" value="tshirt" ${(!editing || editing.kind !== 'jersey') ? 'checked' : ''}> T-shirt / Hoodie</label>
-        <label class="sizechk"><input type="radio" name="pKind" value="jersey" ${(editing && editing.kind === 'jersey') ? 'checked' : ''}> Jersey</label>
-      </div>
-      <small style="color:var(--muted);display:block;margin-top:6px">Jerseys show on the dedicated <b>Jersey</b> page; the rest show on the home page.</small></div>
-    <div class="dgroup"><div class="t">Category</div>
-      <input id="pCat" list="pCatList" placeholder="Type or pick a category (e.g. Oversized Tees)" value="${editing ? esc(editing.category||'') : ''}" style="width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px">
-      <datalist id="pCatList">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
-      <small style="color:var(--muted);display:block;margin-top:6px">New categories are created automatically and shown on the home page.</small></div>
-    <div class="dgroup"><div class="t">Available sizes</div><div class="sizes-row">${sizeChecks}</div></div>
-    <div class="dgroup"><div class="t">Badge (optional)</div><select id="pBadge">${badgeOpts}</select></div>
-    <div class="dgroup"><div class="t">${editing ? 'Design' : 'Designs & prices'}</div>
-      <div id="designList"></div>
-      ${editing ? '' : `<button class="btn btn-light btn-block" id="addDesign" style="margin-top:6px">${ic('plus',15)} Add another design</button>`}
-    </div>
-    <button class="btn btn-dark btn-block btn-lg" id="saveProd">${editing ? 'Save changes' : 'Publish to store'}</button>
-    <small style="color:var(--muted);display:block;margin-top:10px;text-align:center">Products appear instantly on the home page.</small>`;
-  renderDesignRows(!!editing);
-  document.getElementById('closeDrawer').onclick = closeDrawer;
-  /* picking "Jersey" auto-ticks the full S–XXXXL range; back to T-shirt unticks the extras */
-  document.querySelectorAll('input[name=pKind]').forEach(r => r.addEventListener('change', () => {
-    if (editing) return;
-    const isJersey = document.querySelector('input[name=pKind]:checked').value === 'jersey';
-    document.querySelectorAll('.sizes-row input[type=checkbox]').forEach(c => {
-      if (isJersey) c.checked = true;
-      else if (['XXXL','XXXXL'].includes(c.value)) c.checked = false;
+/* ---- image lightbox: click a product photo to view it big, × to close ---- */
+let _lbImgs = [], _lbI = 0;
+function openLightbox(imgs, name, start = 0) {
+  _lbImgs = imgs; _lbI = start;
+  let lb = document.getElementById('lightbox');
+  if (!lb) {
+    lb = document.createElement('div'); lb.id = 'lightbox'; lb.className = 'lightbox';
+    lb.innerHTML = `
+      <button class="lb-close" aria-label="close">&times;</button>
+      <button class="lb-prev" aria-label="previous">&#8249;</button>
+      <img class="lb-img" alt="">
+      <button class="lb-next" aria-label="next">&#8250;</button>
+      <div class="lb-caption"></div>`;
+    document.body.appendChild(lb);
+    lb.querySelector('.lb-close').onclick = closeLightbox;
+    lb.querySelector('.lb-prev').onclick  = e => { e.stopPropagation(); lbShow(_lbI - 1); };
+    lb.querySelector('.lb-next').onclick  = e => { e.stopPropagation(); lbShow(_lbI + 1); };
+    lb.addEventListener('click', e => { if (e.target === lb) closeLightbox(); });
+    document.addEventListener('keydown', e => {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') lbShow(_lbI - 1);
+      if (e.key === 'ArrowRight') lbShow(_lbI + 1);
     });
-  }));
-  const addBtn = document.getElementById('addDesign');
-  if (addBtn) addBtn.onclick = () => { designRows.push({ name:'', price:'', description:'', images: [] }); renderDesignRows(false); };
-  document.getElementById('saveProd').onclick = () => saveProduct(editing);
-}
-function renderDesignRows(single) {
-  syncDesignInputs();
-  document.getElementById('designList').innerHTML = designRows.map((d, i) => `
-    <div class="design-row" data-i="${i}" style="display:block">
-      <input class="d-name" placeholder="Design name (e.g. Abstract Oversized Tee)" value="${esc(d.name)}">
-      <textarea class="d-desc" placeholder="Description — one point per line, start bullets with *  (e.g. * Regular fit, crew neck)" rows="4" style="width:100%;margin-top:8px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px">${esc(d.description || '')}</textarea>
-      <div class="thumbs">
-        ${(d.images || []).map((im, k) => `
-          <span class="thumb-w"><img src="${im}"><button class="t-rm" data-rmimg="${i}:${k}" title="Remove photo">&times;</button>${k===0?'<span class="t-cover">Cover</span>':''}</span>`).join('')}
-        <div class="design-img add-tile" data-pick="${i}">${ic('plus',16)}<span>Add photos</span></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-        <input class="d-price" type="number" min="0" placeholder="Price ৳" value="${d.price}" style="flex:1">
-        ${(!single && designRows.length > 1) ? `<button class="btn btn-light d-rm" data-rm="${i}" style="padding:8px 10px;color:var(--red)">${ic('x',15)} Remove design</button>` : ''}
-      </div>
-      <input type="file" accept="image/*" multiple class="d-file" data-file="${i}" hidden>
-    </div>`).join('');
-  document.querySelectorAll('.t-rm').forEach(b => b.onclick = e => {
-    e.preventDefault();
-    syncDesignInputs();
-    const [ri, ki] = b.dataset.rmimg.split(':').map(Number);
-    designRows[ri].images.splice(ki, 1);
-    renderDesignRows(single);
-  });
-  document.querySelectorAll('.design-img').forEach(el => el.onclick = () => document.querySelector(`[data-file="${el.dataset.pick}"]`).click());
-  document.querySelectorAll('.d-file').forEach(inp => inp.onchange = async e => {
-    const files = [...e.target.files]; if (!files.length) return;
-    try {
-      syncDesignInputs();
-      const row = designRows[+inp.dataset.file];
-      for (const f of files) row.images.push(await resizeImage(f));
-      renderDesignRows(single);
-    } catch { toast('Could not read an image'); }
-  });
-  document.querySelectorAll('.d-rm').forEach(b => b.onclick = () => { syncDesignInputs(); designRows.splice(+b.dataset.rm, 1); renderDesignRows(single); });
-}
-function syncDesignInputs() {
-  document.querySelectorAll('.design-row').forEach(row => {
-    const i = +row.dataset.i;
-    if (!designRows[i]) return;
-    designRows[i].name = row.querySelector('.d-name').value;
-    designRows[i].price = row.querySelector('.d-price').value;
-    const de = row.querySelector('.d-desc'); if (de) designRows[i].description = de.value;
-  });
-}
-async function saveProduct(editing) {
-  syncDesignInputs();
-  toast('Saving…');
-  const category = (document.getElementById('pCat').value || '').trim();
-  const badge = document.getElementById('pBadge').value || null;
-  const kind = (document.querySelector('input[name=pKind]:checked') || {}).value || 'tshirt';
-  const sizes = [...document.querySelectorAll('.sizes-row input[type=checkbox]:checked')].map(c => c.value);
-  const valid = designRows.filter(d => d.name.trim() && Number(d.price) > 0);
-  if (!category) return toast('Enter a category');
-  if (!valid.length) return toast('Add a design name and price');
-  if (!valid.every(d => d.images && d.images.length) && !editing) { if (!confirm('Some designs have no photo. Publish anyway?')) return; }
-  if (window.SB) await SB.addCategory(category); else Store.addCategory(category);
-  if (editing) {
-    const d = valid[0];
-    const patch = { name:d.name.trim(), price:Number(d.price), images:d.images, description:d.description || '', category, badge, sizes, kind };
-    if (window.SB) await SB.updateProduct(editing.id, patch); else Store.updateProduct(editing.id, patch);
-    toast('Product updated');
-  } else {
-    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), images:d.images, description:d.description || '', category, badge, sizes, kind }));
-    if (window.SB) await SB.createProducts(list); else list.forEach(x => Store.addProduct(x));
-    toast(`${valid.length} ${kind === 'jersey' ? 'jersey' : 'product'}(s) published`);
   }
-  closeDrawer(); renderProducts();
+  lb.querySelector('.lb-caption').textContent = name || '';
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  lbShow(start);
 }
-function openCategoryManager() {
-  document.getElementById('overlay').classList.add('show');
-  const draw = () => {
-    document.getElementById('drawer').innerHTML = `
-      <div class="dh"><h3>Categories</h3><button class="close" id="closeDrawer">${ic('x',18)}</button></div>
-      <div class="dgroup"><div class="t">Add category</div>
-        <div style="display:flex;gap:8px"><input id="newCatName" placeholder="e.g. Winter Collection" style="flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:10px">
-        <button class="btn btn-dark" id="addCatBtn">Add</button></div></div>
-      <div class="dgroup"><div class="t">Your categories</div>
-        ${Store.getCategories().map(c => {
-          const count = Store.getProducts().filter(p => p.category === c).length;
-          return `<div class="kv"><span>${esc(c)} <small style="color:var(--muted-2)">(${count})</small></span>
-            <button class="btn btn-light" data-del-cat="${esc(c)}" style="padding:5px 9px;color:var(--red)">${ic('x',14)}</button></div>`;
-        }).join('')}</div>`;
-    document.getElementById('closeDrawer').onclick = closeDrawer;
-    document.getElementById('addCatBtn').onclick = async () => { const v = document.getElementById('newCatName').value; if (!v.trim()) return; if (window.SB) await SB.addCategory(v); else Store.addCategory(v); draw(); };
-    document.querySelectorAll('[data-del-cat]').forEach(b => b.onclick = async () => { if (window.SB) await SB.removeCategory(b.dataset.delCat); else Store.removeCategory(b.dataset.delCat); draw(); });
-  };
-  draw();
+function lbShow(i) {
+  const lb = document.getElementById('lightbox'); if (!lb) return;
+  _lbI = (i + _lbImgs.length) % _lbImgs.length;
+  lb.querySelector('.lb-img').src = _lbImgs[_lbI];
+  const multi = _lbImgs.length > 1;
+  lb.querySelector('.lb-prev').style.display = multi ? '' : 'none';
+  lb.querySelector('.lb-next').style.display = multi ? '' : 'none';
 }
-
-/* ---------- CUSTOMERS ---------- */
-function wireCustomers() {
-  document.getElementById('custSearch').addEventListener('input', renderCustomers);
-  document.getElementById('custExport').onclick = () => {
-    const c = Store.customers();
-    const head = ['Name','Phone','City','District','Address','Orders','Total Spent','Collected','Last Order'];
-    const q = s => `"${String(s??'').replace(/"/g,'""')}"`;
-    const lines = c.map(x => [x.name,x.phone,x.city,x.district,x.address,x.orders,x.spent,x.collected,fmtDate(x.last)].map(q).join(','));
-    download(`halfhata-customers-${Date.now()}.csv`, [head.join(','), ...lines].join('\n'));
-    toast(`Exported ${c.length} customers`);
-  };
+function closeLightbox() {
+  const lb = document.getElementById('lightbox'); if (!lb) return;
+  lb.classList.remove('open');
+  document.body.style.overflow = '';
 }
-function renderCustomers() {
-  const q = (document.getElementById('custSearch').value || '').toLowerCase();
-  let c = Store.customers().filter(x => (x.name + x.phone + x.city).toLowerCase().includes(q));
-  document.getElementById('custCount').textContent = Store.customers().length + ' customers';
-  document.getElementById('custBody').innerHTML = c.length ? c.map(x => `
-    <tr><td><b>${esc(x.name)}</b></td><td>${esc(x.phone)}</td><td>${esc(x.city)}</td><td>${x.orders}</td>
-      <td>${money(x.spent)}</td><td>${money(x.collected)}</td><td>${fmtDate(x.last)}</td></tr>`).join('')
-    : `<tr><td colspan="7"><div class="empty">No customers found.</div></td></tr>`;
-}
-
-/* ---------- ORDER DRAWER ---------- */
-function openDrawer(id) {
-  const o = Store.getOrder(id);
-  document.getElementById('overlay').classList.add('show');
-  const courierOpts = HH.couriers.map(c => `<option ${o.courier?.service===c?'selected':''}>${c}</option>`).join('');
-  document.getElementById('drawer').innerHTML = `
-    <div class="dh"><h3>#${esc(o.id)}</h3><button class="close" id="closeDrawer">${ic('x',18)}</button></div>
-    <div style="display:flex;gap:8px;margin-bottom:16px"><span class="pill ${statusPill[o.status]}">${o.status}</span><span class="pill pill-grey">${esc(o.payment.label)}</span></div>
-    <div class="dgroup"><div class="t">Customer</div>
-      <div class="kv"><span>Name</span><b>${esc(o.customer.name)}</b></div>
-      <div class="kv"><span>Phone</span><b>${esc(o.customer.phone)}</b></div>
-      <div class="kv"><span>Address</span><b style="text-align:right;max-width:62%">${esc(o.customer.address)}, ${esc(o.customer.city)}, ${esc(o.customer.district)}</b></div></div>
-    <div class="dgroup"><div class="t">Items</div>
-      ${o.items.map(it => `<div class="kv"><span>${esc(it.name)} · ${esc(it.size)} ×${it.qty}</span><b>${money(it.price*it.qty)}</b></div>`).join('')}
-      <div class="kv" style="border-top:1px solid var(--line);margin-top:8px;padding-top:10px"><span>Subtotal</span><b>${money(o.subtotal)}</b></div>
-      <div class="kv"><span>Delivery</span><b>${money(o.delivery)}</b></div>
-      <div class="kv"><span>Total</span><b>${money(o.total)}</b></div>
-      <div class="kv"><span>Advance paid ${o.payment.txnId?`(Txn ${esc(o.payment.txnId)})`:''}</span><b>${money(o.payment.paid)}</b></div>
-      <div class="kv"><span>Due on delivery</span><b>${money(o.payment.due)}</b></div></div>
-    <div class="dgroup"><div class="t">Assign Courier & Tracking</div>
-      <div class="field"><label>Courier Service</label><select id="dCourier">${courierOpts}</select></div>
-      <div class="field"><label>Tracking ID</label><input id="dTrack" value="${esc(o.courier?.trackingId||'')}" placeholder="Courier tracking number"></div>
-      <button class="btn btn-dark btn-block" id="dAssign">${ic('truck',16)} Ship & Notify Customer</button>
-      <small style="color:var(--muted);display:block;margin-top:8px">Marks the order "On Courier" and sends the tracking notification to the customer's account.</small></div>
-    <div class="dgroup"><div class="t">Update Status</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">${['Pending','On Courier','Delivered','Cancelled'].map(s => `<button class="btn btn-light" data-status="${s}" style="flex:1">${s}</button>`).join('')}</div></div>
-    <div class="dgroup"><div class="t">Timeline</div><div class="timeline">${o.timeline.slice().reverse().map(t => `<div class="tl"><b>${esc(t.status)}</b><small>${fmtTime(t.at)}${t.note?' · '+esc(t.note):''}</small></div>`).join('')}</div></div>`;
-  document.getElementById('closeDrawer').onclick = closeDrawer;
-  document.getElementById('dAssign').onclick = () => {
-    const svc = document.getElementById('dCourier').value, tid = document.getElementById('dTrack').value.trim();
-    if (!tid) return toast('Enter a tracking ID');
-    Store.assignCourier(o.id, svc, tid); toast(`Customer notified · ${svc} ${tid}`); refreshCurrent(); openDrawer(o.id);
-  };
-  document.querySelectorAll('[data-status]').forEach(b => b.onclick = () => { Store.setStatus(o.id, b.dataset.status); toast(`Status → ${b.dataset.status}`); refreshCurrent(); openDrawer(o.id); });
-}
-function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); }
-document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeDrawer(); });
-function refreshCurrent(){ ({ dashboard:renderDashboard, orders:renderOrders, products:renderProducts, customers:renderCustomers }[state.view] || (()=>{}))(); updateAlerts(); }
-
-/* auto-refresh: pick up new orders when the tab regains focus + every 15s */
-window.addEventListener('focus', async () => {
-  if (Store.isAdmin() && document.getElementById('app').style.display !== 'none') { if (window.SB) await SB.loadOrders(); refreshCurrent(); }
+document.addEventListener('click', e => {
+  const img = e.target.closest('img.pimg'); if (!img) return;
+  e.preventDefault(); e.stopPropagation();
+  const p = img.dataset.pid && typeof productById === 'function' ? productById(img.dataset.pid) : null;
+  if (p) openProductModal(p.id);
+  else openLightbox(JSON.parse(img.dataset.images), img.dataset.name || '', 0);
 });
-setInterval(async () => {
-  if (Store.isAdmin() && document.getElementById('app').style.display !== 'none'
-      && !document.getElementById('overlay').classList.contains('show')) { if (window.SB) await SB.loadOrders(); refreshCurrent(); }
-}, 15000);
+
+/* ================= PRODUCT MODAL (details + mandatory size) ================= */
+function descHtml(text) {
+  if (!text) return '';
+  const lines = String(text).split('\n').map(l => l.trim()).filter(Boolean);
+  let out = '', inList = false;
+  for (const l of lines) {
+    if (l.startsWith('*') || l.startsWith('-')) {
+      if (!inList) { out += '<ul>'; inList = true; }
+      out += `<li>${esc(l.replace(/^[-*]\s*/, ''))}</li>`;
+    } else {
+      if (inList) { out += '</ul>'; inList = false; }
+      out += `<p>${esc(l)}</p>`;
+    }
+  }
+  if (inList) out += '</ul>';
+  return out;
+}
+
+function openProductModal(id) {
+  const p = productById(id); if (!p) return;
+  const imgs = (p.images && p.images.length) ? p.images : (p.image ? [p.image] : []);
+  const oos = p.in_stock === false;
+  let m = document.getElementById('pmodal');
+  if (!m) { m = document.createElement('div'); m.id = 'pmodal'; m.className = 'pmodal'; document.body.appendChild(m); }
+  m.innerHTML = `
+    <div class="pm-card">
+      <button class="pm-close">&times;</button>
+      <div class="pm-gallery">
+        <div class="pm-main">${imgs.length ? `<img src="${imgs[0]}" id="pmMain">` : garment(p.type||'tee', p.color||'#141416', '70%')}
+          ${oos ? '<span class="pm-oos">Out of Stock</span>' : ''}</div>
+        ${imgs.length > 1 ? `<div class="pm-thumbs">${imgs.map((im,i)=>`<img src="${im}" data-pm="${i}" class="${i===0?'on':''}">`).join('')}</div>` : ''}
+      </div>
+      <div class="pm-info">
+        <div class="pm-cat">${esc(p.category || '')}${p.badge ? ` · <span class="pill pill-black" style="font-size:10px">${esc(p.badge)}</span>` : ''}</div>
+        <h2>${esc(p.name)}</h2>
+        <div class="pm-price">${money(p.price)}</div>
+        <div class="pm-desc">${descHtml(p.description) || '<p style="color:var(--muted)">Premium quality — crafted for comfort and built to last.</p>'}</div>
+        <div class="pm-size-head">Select Size <span class="req">*</span></div>
+        <div class="pm-sizes" id="pmSizes">
+          ${(p.sizes && p.sizes.length ? p.sizes : ['M','L','XL']).map(sz => `<button class="pm-sz" data-sz="${esc(sz)}">${esc(sz)}</button>`).join('')}
+        </div>
+        <div class="pm-hint" id="pmHint">Please select a size to continue</div>
+        <button class="btn btn-dark btn-block btn-lg" id="pmAdd" ${oos ? 'disabled' : ''}>${oos ? 'Out of Stock' : 'Add to Cart'}</button>
+        ${(() => { const ch = SIZE_CHARTS[p.kind === 'jersey' ? 'jersey' : 'tshirt']; return `
+        <div class="pm-chart-wrap">
+          <div class="pm-chart-title">${ch.title}</div>
+          <table class="sc-table">
+            <thead><tr>${ch.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+            <tbody>${ch.rows.map(r => `<tr>${r.map((v,i) => i===0?`<td><b>${v}</b></td>`:`<td>${v}"</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+          <p class="sc-note">${ch.note}</p>
+        </div>`; })()}
+      </div>
+    </div>`;
+  m.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  let chosen = null;
+  m.querySelector('.pm-close').onclick = closeProductModal;
+  m.onclick = e => { if (e.target === m) closeProductModal(); };
+  m.querySelectorAll('.pm-sz').forEach(b => b.onclick = () => {
+    chosen = b.dataset.sz;
+    m.querySelectorAll('.pm-sz').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('pmHint').style.visibility = 'hidden';
+  });
+  m.querySelectorAll('[data-pm]').forEach(t => t.onclick = () => {
+    document.getElementById('pmMain').src = imgs[+t.dataset.pm];
+    m.querySelectorAll('[data-pm]').forEach(x => x.classList.toggle('on', x === t));
+  });
+  const main = document.getElementById('pmMain');
+  if (main) main.onclick = () => openLightbox(imgs, p.name, [...m.querySelectorAll('[data-pm]')].findIndex(x=>x.classList.contains('on')) || 0);
+  const add = document.getElementById('pmAdd');
+  if (add && !oos) add.onclick = () => {
+    if (!chosen) { const h = document.getElementById('pmHint'); h.style.visibility = 'visible'; h.classList.add('shake'); setTimeout(()=>h.classList.remove('shake'),400); return; }
+    Store.addToCart(p.id, { size: chosen });
+    if (typeof refreshCart === 'function') refreshCart();
+    toast(`Added — ${p.name} (${chosen})`);
+    closeProductModal();
+  };
+}
+function closeProductModal() {
+  const m = document.getElementById('pmodal'); if (!m) return;
+  m.classList.remove('open'); document.body.style.overflow = '';
+}
+
+
+/* ================= SIZE CHART (built-in table) ================= */
+const SIZE_CHARTS = {
+  tshirt: {
+    title: 'T-Shirt Size Chart',
+    note: 'Measurements in inches. Length = shoulder to hem · Width = chest, side to side.',
+    cols: ['Size', 'Length', 'Width'],
+    rows: [
+      ['S',   27, 38],
+      ['M',   28, 40],
+      ['L',   29, 42],
+      ['XL',  30, 44],
+      ['XXL', 31, 46],
+    ],
+  },
+  jersey: {
+    title: 'Jersey Size Chart',
+    note: 'Measurements in inches. Chest = side to side · Length = shoulder to hem.',
+    cols: ['Size', 'Chest', 'Length'],
+    rows: [
+      ['S',     36, 26],
+      ['M',     38, 27],
+      ['L',     40, 28],
+      ['XL',    42, 29],
+      ['XXL',   44, 30],
+      ['XXXL',  46, 31],
+      ['XXXXL', 48, 32],
+    ],
+  },
+};
+function openSizeChart() { const SIZE_CHART = SIZE_CHARTS.tshirt;
+  let sc = document.getElementById('scmodal');
+  if (!sc) { sc = document.createElement('div'); sc.id = 'scmodal'; sc.className = 'scmodal'; document.body.appendChild(sc); }
+  sc.innerHTML = `
+    <div class="sc-card">
+      <button class="sc-close">&times;</button>
+      <h3>${SIZE_CHART.title}</h3>
+      <table class="sc-table">
+        <thead><tr>${SIZE_CHART.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+        <tbody>${SIZE_CHART.rows.map(r => `<tr>${r.map((v,i) => i===0?`<td><b>${v}</b></td>`:`<td>${v}"</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+      <p class="sc-note">${SIZE_CHART.note}</p>
+    </div>`;
+  sc.classList.add('open');
+  sc.querySelector('.sc-close').onclick = () => sc.classList.remove('open');
+  sc.onclick = e => { if (e.target === sc) sc.classList.remove('open'); };
+}
+
+/* ================= MOBILE MENU (hamburger) ================= */
+(function mobileNav() {
+  const navBar = document.querySelector('.nav');
+  const links = document.querySelector('.nav-links');
+  const icons = document.querySelector('.nav-icons');
+  if (!navBar || !links || !icons) return;
+  const btn = document.createElement('button');
+  btn.className = 'nav-burger'; btn.setAttribute('aria-label', 'menu');
+  btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  icons.appendChild(btn);
+  const panel = document.createElement('div');
+  panel.className = 'mobile-menu';
+  panel.innerHTML = links.innerHTML;
+  navBar.appendChild(panel);
+  btn.onclick = e => { e.stopPropagation(); panel.classList.toggle('open'); };
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.mobile-menu') && !e.target.closest('.nav-burger')) panel.classList.remove('open');
+  });
+  panel.addEventListener('click', e => { if (e.target.closest('a')) panel.classList.remove('open'); });
+})();
