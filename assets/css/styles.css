@@ -512,3 +512,7 @@ img.pimg{cursor:zoom-in}
   .nav{position:sticky}
   .nav .container{position:relative}
 }
+
+/* size chart inside product modal */
+.pm-chart-wrap{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+.pm-chart-title{font-weight:700;font-size:13.5px;margin-bottom:8px}
