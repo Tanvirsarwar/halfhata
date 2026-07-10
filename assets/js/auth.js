@@ -22,7 +22,15 @@ function renderAuth(mountId, onSuccess) {
     <div class="field"><label>Password</label><input id="auPass" type="password" placeholder="At least 6 characters" autocomplete="current-password"></div>
     <div class="field hide" id="auConfirmWrap"><label>Confirm password</label><input id="auPass2" type="password" placeholder="Re-enter password" autocomplete="new-password"></div>
     <div class="auth-msg hide" id="auMsg"></div>
-    <button class="btn btn-dark btn-block" id="auSubmit">Log in</button>`;
+    <button class="btn btn-dark btn-block" id="auSubmit">Log in</button>
+    <button class="au-forgot" id="auForgot">Forgot password?</button>
+    <div class="hide" id="auResetWrap" style="margin-top:14px;border-top:1px dashed var(--line);padding-top:14px">
+      <b style="font-size:14px;display:block;margin-bottom:10px">Reset your password</b>
+      <div class="field"><label>New password</label><input id="auNew" type="password" placeholder="At least 6 characters"></div>
+      <div class="field"><label>Confirm new password</label><input id="auNew2" type="password" placeholder="Re-enter new password"></div>
+      <button class="btn btn-dark btn-block" id="auResetBtn">Set new password</button>
+      <small style="color:var(--muted);display:block;margin-top:8px">Signed up with Google? No password needed — just use "Continue with Google" above.</small>
+    </div>`;
 
   let mode = 'login';
   const $ = id => document.getElementById(id);
@@ -47,6 +55,21 @@ function renderAuth(mountId, onSuccess) {
     onSuccess(Store.getUser());
   }
   $('auSubmit').onclick = submit;
+  $('auForgot').onclick = () => {
+    $('auResetWrap').classList.toggle('hide');
+    $('auMsg').classList.add('hide');
+  };
+  $('auResetBtn').onclick = async () => {
+    const email = $('auEmail').value.trim(), n1 = $('auNew').value, n2 = $('auNew2').value;
+    if (!/^\S+@\S+\.\S+$/.test(email)) return show('Enter your account email in the Email field above first');
+    if (n1.length < 6) return show('New password must be at least 6 characters');
+    if (n1 !== n2) return show('New passwords do not match');
+    const res = await Store.resetPassword(email, n1);
+    if (!res.ok) return show(res.error);
+    $('auResetWrap').classList.add('hide');
+    $('auPass').value = '';
+    show('Password updated — log in with your new password ✓', true);
+  };
   [$('auEmail'), $('auPass'), $('auPass2')].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); }));
 
   mountGoogle(el, onSuccess);
