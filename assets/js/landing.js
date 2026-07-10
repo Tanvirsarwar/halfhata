@@ -1,4 +1,7 @@
 /* ============ Landing ============ */
+/* safe setter: skips missing elements instead of crashing the page */
+function put(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; return el; }
+
 const wish = new Set();
 let activeCat = 'all';
 
@@ -14,7 +17,9 @@ function card(p) {
       <div class="name">${esc(p.name)}</div>
       <div class="cat" style="color:var(--muted);font-size:12px">${esc(p.category || '')}</div>
       <div class="price">${money(p.price)}</div>
-      <button class="btn btn-dark btn-block add" data-add="${esc(p.id)}">Add to Cart ${ic('cart',16)}</button>
+      ${p.in_stock === false
+        ? `<button class="btn btn-block add oos-btn" disabled>Out of Stock</button>`
+        : `<button class="btn btn-dark btn-block add" data-add="${esc(p.id)}">Add to Cart ${ic('cart',16)}</button>`}
     </div>
   </div>`;
 }
@@ -36,18 +41,18 @@ function renderGrids() {
 }
 
 function renderChrome() {
-  document.getElementById('navBell').innerHTML = ic('bell', 22);
-  document.getElementById('navUser').innerHTML = ic('user', 22);
-  document.getElementById('navCart').innerHTML = ic('cart', 22);
-  document.getElementById('heroArrow').innerHTML = ic('arrow', 18);
-  document.getElementById('va1').innerHTML = ic('arrow', 16);
-  document.getElementById('va2').innerHTML = ic('arrow', 16);
-  document.getElementById('obCartIc').innerHTML = ic('cart', 22);
-  document.getElementById('obArrow').innerHTML = ic('arrow', 18);
+  put('navBell', ic('bell', 22));
+  put('navUser', ic('user', 22));
+  put('navCart', ic('cart', 22));
+  put('heroArrow', ic('arrow', 18));
+  put('va1', ic('arrow', 16));
+  put('va2', ic('arrow', 16));
+  put('obCartIc', ic('cart', 22));
+  put('obArrow', ic('arrow', 18));
 
-  document.getElementById('footerChannels').innerHTML = `
+  put('footerChannels', `
     <a class="it" href="mailto:${HH.email}"><span class="ficon">${ic('mail',15)}</span><div><b>Email</b><small>${HH.email}</small></div></a>
-    <a class="it" href="https://wa.me/88${HH.phone}" target="_blank"><span class="ficon wa">${ic('wa',15)}</span><div><b>WhatsApp</b><small>${HH.phone}</small></div></a>`;
+    <a class="it" href="https://wa.me/88${HH.phone}" target="_blank"><span class="ficon wa">${ic('wa',15)}</span><div><b>WhatsApp</b><small>${HH.phone}</small></div></a>`);
 
   const feats = [
     ['shield','Premium Quality','Comfort & Durable'],
@@ -56,29 +61,29 @@ function renderChrome() {
     ['box','Easy Returns','Hassle Free'],
     ['truck','Fast Delivery','Reliable & Secure'],
   ];
-  document.getElementById('features').innerHTML = feats.map(([i, t, s]) =>
-    `<div class="feature"><div class="ic">${ic(i, 22)}</div><div><b>${t}</b><small>${s}</small></div></div>`).join('');
+  put('features', feats.map(([i, t, s]) =>
+    `<div class="feature"><div class="ic">${ic(i, 22)}</div><div><b>${t}</b><small>${s}</small></div></div>`).join(''));
 
   const wa = HH.channels[0];
   const waEl = document.getElementById('waFloat');
-  waEl.href = waLink(wa); waEl.innerHTML = ic('wa', 26); waEl.style.color = '#fff';
+  if (waEl) { waEl.href = waLink(wa); waEl.innerHTML = ic('wa', 26); waEl.style.color = '#fff'; }
 }
 const waLink = c => c.key === 'whatsapp' ? `https://wa.me/88${c.number}` : '#';
 
 function refreshCart() {
   const n = Store.cartCount(), sub = Store.cartSubtotal();
   const badge = document.getElementById('navCartBadge');
-  badge.textContent = n; badge.classList.toggle('hide', n === 0);
-  document.getElementById('obCount').textContent = n;
-  document.getElementById('obItems').textContent = `${n} item${n !== 1 ? 's' : ''} in cart`;
-  document.getElementById('obTotal').textContent = money(sub);
-  document.getElementById('orderbar').classList.toggle('show', n > 0);
+  if (badge) { badge.textContent = n; badge.classList.toggle('hide', n === 0); }
+  const oc=document.getElementById('obCount'); if (oc) oc.textContent = n;
+  const oi=document.getElementById('obItems'); if (oi) oi.textContent = `${n} item${n !== 1 ? 's' : ''} in cart`;
+  const ot=document.getElementById('obTotal'); if (ot) ot.textContent = money(sub);
+  const ob=document.getElementById('orderbar'); if (ob) ob.classList.toggle('show', n > 0);
 }
 function goCheckout() { if (Store.cartCount() === 0) return toast('Your cart is empty'); location.href = 'checkout.html'; }
 
 document.addEventListener('click', e => {
   const add = e.target.closest('[data-add]');
-  if (add) { Store.addToCart(add.dataset.add); refreshCart(); toast('Added to cart'); }
+  if (add) { openProductModal(add.dataset.add); }
   const w = e.target.closest('[data-wish]');
   if (w) { const id = w.dataset.wish; wish.has(id) ? wish.delete(id) : wish.add(id);
     w.classList.toggle('on', wish.has(id)); w.innerHTML = ic(wish.has(id) ? 'heartFill' : 'heart', 18); }
@@ -95,9 +100,10 @@ const timeAgo = iso => {
   return Math.floor(s/86400) + 'd ago';
 };
 function renderNotifs() {
+  const nl = document.getElementById('notifList'); if (!nl) return;
   const list = Store.userNotifications(), unread = list.filter(n => !n.read).length;
   const badge = document.getElementById('navBellBadge');
-  badge.textContent = unread; badge.classList.toggle('hide', unread === 0);
+  if (badge) { badge.textContent = unread; badge.classList.toggle('hide', unread === 0); }
   document.getElementById('notifList').innerHTML = list.length ? list.map(n => `
     <div class="notif-item ${n.read ? '' : 'unread'}">
       <span class="ni-dot"></span>
@@ -108,12 +114,14 @@ function renderNotifs() {
     </div>`).join('')
     : `<div class="notif-empty">No notifications yet.<br>Place an order to get delivery updates here.</div>`;
 }
-document.getElementById('navBell').onclick = e => {
+const _bell = document.getElementById('navBell');
+if (_bell) _bell.onclick = e => {
   e.stopPropagation();
-  document.getElementById('notifMenu').classList.toggle('open');
+  const m = document.getElementById('notifMenu'); if (m) m.classList.toggle('open');
   renderNotifs();
 };
-document.getElementById('markRead').onclick = () => { Store.markAllRead(); renderNotifs(); };
+const _mr = document.getElementById('markRead');
+if (_mr) _mr.onclick = () => { Store.markAllRead(); renderNotifs(); };
 document.addEventListener('click', e => {
   if (!e.target.closest('.notif-wrap')) document.getElementById('notifMenu').classList.remove('open');
 });

@@ -15,7 +15,9 @@ function card(p) {
       <div class="name">${esc(p.name)}</div>
       <div class="cat" style="color:var(--muted);font-size:12px">${esc(p.category || '')}</div>
       <div class="price">${money(p.price)}</div>
-      <button class="btn btn-dark btn-block add" data-add="${esc(p.id)}">Add to Cart ${ic('cart',16)}</button>
+      ${p.in_stock === false
+        ? `<button class="btn btn-block add oos-btn" disabled>Out of Stock</button>`
+        : `<button class="btn btn-dark btn-block add" data-add="${esc(p.id)}">Add to Cart ${ic('cart',16)}</button>`}
     </div>
   </div>`;
 }
@@ -61,7 +63,7 @@ function goCheckout() { if (Store.cartCount() === 0) return toast('Your cart is 
 
 document.addEventListener('click', e => {
   const add = e.target.closest('[data-add]');
-  if (add) { Store.addToCart(add.dataset.add); refreshCart(); toast('Added to cart'); }
+  if (add) { openProductModal(add.dataset.add); }
   const w = e.target.closest('[data-wish]');
   if (w) { const id = w.dataset.wish; wish.has(id) ? wish.delete(id) : wish.add(id);
     w.classList.toggle('on', wish.has(id)); w.innerHTML = ic(wish.has(id) ? 'heartFill' : 'heart', 18); }

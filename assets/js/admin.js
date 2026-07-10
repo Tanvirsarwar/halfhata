@@ -106,6 +106,17 @@ function switchView(v) {
     document.getElementById('resetAll').onclick = () => {
       if (confirm('Delete ALL data and start fresh? This cannot be undone.')) { Store.resetAllData(); toast('All data cleared'); setTimeout(() => location.reload(), 700); }
     };
+  } else if (v === 'notifications') {
+    document.getElementById('view-generic').style.display = 'block';
+    document.getElementById('genTitle').textContent = 'Notifications';
+    document.getElementById('genCrumb').textContent = 'Dashboard › Notifications';
+    const pend = Store.getOrders().filter(o => o.status === 'Pending');
+    document.getElementById('genBody').innerHTML = pend.length ? `<div style="text-align:left">
+      <p style="margin-bottom:14px"><b>${pend.length} order(s) waiting for action</b> — assign a courier to ship & notify the customer.</p>
+      ${pend.map(o => `<div class="kv" style="border-bottom:1px solid #f2f1ef;padding:10px 0">
+        <span><b>#${esc(o.id)}</b> · ${esc(o.customer.name)} · ${money(o.total)} <small style="color:var(--muted)">(${esc(o.payment.label)})</small></span>
+        <button class="btn btn-dark" data-view-order="${esc(o.id)}" style="padding:7px 14px">Open</button></div>`).join('')}</div>`
+      : `${ic('checkCircle',34)}<br><br>All caught up — no pending orders.`;
   } else {
     document.getElementById('view-generic').style.display = 'block';
     document.getElementById('genTitle').textContent = v.charAt(0).toUpperCase() + v.slice(1);
@@ -240,6 +251,15 @@ function wireProducts() {
   document.getElementById('addProdBtn').onclick = () => openProductForm(null);
   document.getElementById('manageCatsBtn').onclick = openCategoryManager;
   document.getElementById('prodBody').addEventListener('click', async e => {
+    const st = e.target.closest('[data-stock]');
+    if (st) {
+      const p = Store.getProducts().find(x => x.id === st.dataset.stock);
+      const newVal = p && p.in_stock === false ? true : false;   // flip
+      if (window.SB) await SB.updateProduct(st.dataset.stock, { in_stock: newVal });
+      else Store.updateProduct(st.dataset.stock, { in_stock: newVal });
+      toast(newVal ? 'Back in stock' : 'Marked out of stock');
+      renderProducts(); return;
+    }
     const ed = e.target.closest('[data-edit-prod]'); if (ed) openProductForm(ed.dataset.editProd);
     const dl = e.target.closest('[data-del-prod]');
     if (dl) { const p = Store.getProducts().find(x => x.id === dl.dataset.delProd);
@@ -262,6 +282,7 @@ function renderProducts() {
       <td>${esc(p.category||'—')}</td><td>${money(p.price)}</td><td>${s.qty}</td><td>${money(s.revenue)}</td>
       <td><span class="pill ${badgeCls}">${esc(p.badge||'Active')}</span></td>
       <td style="white-space:nowrap">
+        <button class="pill ${p.in_stock === false ? 'pill-red' : 'pill-green'}" data-stock="${esc(p.id)}" title="Toggle stock" style="cursor:pointer;border:none;margin-right:8px">${p.in_stock === false ? 'Out of Stock' : 'In Stock'}</button>
         <button class="eye" data-edit-prod="${esc(p.id)}" title="Edit">${ic('settings',16)}</button>
         <button class="eye" data-del-prod="${esc(p.id)}" title="Delete" style="color:var(--red);margin-left:6px">${ic('x',16)}</button>
       </td></tr>`;
@@ -273,8 +294,8 @@ let designRows = [];   // [{name, price, image}]
 function openProductForm(editId) {
   const editing = editId ? Store.getProducts().find(p => p.id === editId) : null;
   designRows = editing
-    ? [{ name: editing.name, price: editing.price, images: (editing.images && editing.images.length ? editing.images.slice() : (editing.image ? [editing.image] : [])) }]
-    : [{ name:'', price:'', images: [] }];
+    ? [{ name: editing.name, price: editing.price, description: editing.description || '', images: (editing.images && editing.images.length ? editing.images.slice() : (editing.image ? [editing.image] : [])) }]
+    : [{ name:'', price:'', description:'', images: [] }];
   document.getElementById('overlay').classList.add('show');
   const cats = Store.getCategories();
   const catOpts = cats.map(c => `<option ${editing && editing.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('');
@@ -306,7 +327,7 @@ function openProductForm(editId) {
   renderDesignRows(!!editing);
   document.getElementById('closeDrawer').onclick = closeDrawer;
   const addBtn = document.getElementById('addDesign');
-  if (addBtn) addBtn.onclick = () => { designRows.push({ name:'', price:'', images: [] }); renderDesignRows(false); };
+  if (addBtn) addBtn.onclick = () => { designRows.push({ name:'', price:'', description:'', images: [] }); renderDesignRows(false); };
   document.getElementById('saveProd').onclick = () => saveProduct(editing);
 }
 function renderDesignRows(single) {
@@ -314,6 +335,7 @@ function renderDesignRows(single) {
   document.getElementById('designList').innerHTML = designRows.map((d, i) => `
     <div class="design-row" data-i="${i}" style="display:block">
       <input class="d-name" placeholder="Design name (e.g. Abstract Oversized Tee)" value="${esc(d.name)}">
+      <textarea class="d-desc" placeholder="Description — one point per line, start bullets with *  (e.g. * Regular fit, crew neck)" rows="4" style="width:100%;margin-top:8px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px">${esc(d.description || '')}</textarea>
       <div class="thumbs">
         ${(d.images || []).map((im, k) => `
           <span class="thumb-w"><img src="${im}"><button class="t-rm" data-rmimg="${i}:${k}" title="Remove photo">&times;</button>${k===0?'<span class="t-cover">Cover</span>':''}</span>`).join('')}
@@ -350,6 +372,7 @@ function syncDesignInputs() {
     if (!designRows[i]) return;
     designRows[i].name = row.querySelector('.d-name').value;
     designRows[i].price = row.querySelector('.d-price').value;
+    const de = row.querySelector('.d-desc'); if (de) designRows[i].description = de.value;
   });
 }
 async function saveProduct(editing) {
@@ -366,11 +389,11 @@ async function saveProduct(editing) {
   if (window.SB) await SB.addCategory(category); else Store.addCategory(category);
   if (editing) {
     const d = valid[0];
-    const patch = { name:d.name.trim(), price:Number(d.price), images:d.images, category, badge, sizes, kind };
+    const patch = { name:d.name.trim(), price:Number(d.price), images:d.images, description:d.description || '', category, badge, sizes, kind };
     if (window.SB) await SB.updateProduct(editing.id, patch); else Store.updateProduct(editing.id, patch);
     toast('Product updated');
   } else {
-    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), images:d.images, category, badge, sizes, kind }));
+    const list = valid.map(d => ({ name:d.name.trim(), price:Number(d.price), images:d.images, description:d.description || '', category, badge, sizes, kind }));
     if (window.SB) await SB.createProducts(list); else list.forEach(x => Store.addProduct(x));
     toast(`${valid.length} ${kind === 'jersey' ? 'jersey' : 'product'}(s) published`);
   }

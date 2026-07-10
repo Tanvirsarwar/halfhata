@@ -52,7 +52,7 @@ window.SB = {
       const row = {
         id: (_slug(d.name) || 'item') + '-' + Math.random().toString(36).slice(2, 6),
         name: d.name.trim(), category: d.category || null, kind: d.kind || 'tshirt',
-        price: Number(d.price) || 0, sizes: d.sizes || [], image: images[0] || null, images, badge: d.badge || null, active: true,
+        price: Number(d.price) || 0, sizes: d.sizes || [], image: images[0] || null, images, badge: d.badge || null, description: d.description || '', in_stock: true, active: true,
       };
       const { error } = await sb.from('products').insert(row);
       if (error) { console.error('insert product', error); toast('Could not save product: ' + error.message); }

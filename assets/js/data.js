@@ -41,7 +41,7 @@ const money = n => '৳' + Number(n).toLocaleString('en-IN');
 function productMedia(p, w = '74%') {
   const imgs = (p && p.images && p.images.length) ? p.images : (p && p.image ? [p.image] : []);
   if (imgs.length) {
-    const dataAttr = ` class="pimg" data-images='${JSON.stringify(imgs).replace(/'/g, "&#39;")}' data-name="${esc(p.name)}"`;
+    const dataAttr = ` class="pimg" data-pid="${esc(p.id)}" data-images='${JSON.stringify(imgs).replace(/'/g, "&#39;")}' data-name="${esc(p.name)}"`;
     const dots = imgs.length > 1 ? `<span class="img-dots">${imgs.map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join('')}</span>` : '';
     return `<img src="${imgs[0]}" alt="${esc(p.name)}" style="width:100%;height:100%;object-fit:cover"${dataAttr}>${dots}`;
   }
@@ -94,5 +94,86 @@ function closeLightbox() {
 document.addEventListener('click', e => {
   const img = e.target.closest('img.pimg'); if (!img) return;
   e.preventDefault(); e.stopPropagation();
-  openLightbox(JSON.parse(img.dataset.images), img.dataset.name || '', 0);
+  const p = img.dataset.pid && typeof productById === 'function' ? productById(img.dataset.pid) : null;
+  if (p) openProductModal(p.id);
+  else openLightbox(JSON.parse(img.dataset.images), img.dataset.name || '', 0);
 });
+
+/* ================= PRODUCT MODAL (details + mandatory size) ================= */
+function descHtml(text) {
+  if (!text) return '';
+  const lines = String(text).split('\n').map(l => l.trim()).filter(Boolean);
+  let out = '', inList = false;
+  for (const l of lines) {
+    if (l.startsWith('*') || l.startsWith('-')) {
+      if (!inList) { out += '<ul>'; inList = true; }
+      out += `<li>${esc(l.replace(/^[-*]\s*/, ''))}</li>`;
+    } else {
+      if (inList) { out += '</ul>'; inList = false; }
+      out += `<p>${esc(l)}</p>`;
+    }
+  }
+  if (inList) out += '</ul>';
+  return out;
+}
+
+function openProductModal(id) {
+  const p = productById(id); if (!p) return;
+  const imgs = (p.images && p.images.length) ? p.images : (p.image ? [p.image] : []);
+  const oos = p.in_stock === false;
+  let m = document.getElementById('pmodal');
+  if (!m) { m = document.createElement('div'); m.id = 'pmodal'; m.className = 'pmodal'; document.body.appendChild(m); }
+  m.innerHTML = `
+    <div class="pm-card">
+      <button class="pm-close">&times;</button>
+      <div class="pm-gallery">
+        <div class="pm-main">${imgs.length ? `<img src="${imgs[0]}" id="pmMain">` : garment(p.type||'tee', p.color||'#141416', '70%')}
+          ${oos ? '<span class="pm-oos">Out of Stock</span>' : ''}</div>
+        ${imgs.length > 1 ? `<div class="pm-thumbs">${imgs.map((im,i)=>`<img src="${im}" data-pm="${i}" class="${i===0?'on':''}">`).join('')}</div>` : ''}
+      </div>
+      <div class="pm-info">
+        <div class="pm-cat">${esc(p.category || '')}${p.badge ? ` · <span class="pill pill-black" style="font-size:10px">${esc(p.badge)}</span>` : ''}</div>
+        <h2>${esc(p.name)}</h2>
+        <div class="pm-price">${money(p.price)}</div>
+        <div class="pm-desc">${descHtml(p.description) || '<p style="color:var(--muted)">Premium quality — crafted for comfort and built to last.</p>'}</div>
+        <div class="pm-size-head">Select Size <span class="req">*</span>
+          <button class="pm-chart" id="pmChart">Size Chart</button></div>
+        <div class="pm-sizes" id="pmSizes">
+          ${(p.sizes && p.sizes.length ? p.sizes : ['M','L','XL']).map(sz => `<button class="pm-sz" data-sz="${esc(sz)}">${esc(sz)}</button>`).join('')}
+        </div>
+        <div class="pm-hint" id="pmHint">Please select a size to continue</div>
+        <button class="btn btn-dark btn-block btn-lg" id="pmAdd" ${oos ? 'disabled' : ''}>${oos ? 'Out of Stock' : 'Add to Cart'}</button>
+      </div>
+    </div>`;
+  m.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  let chosen = null;
+  m.querySelector('.pm-close').onclick = closeProductModal;
+  m.onclick = e => { if (e.target === m) closeProductModal(); };
+  m.querySelectorAll('.pm-sz').forEach(b => b.onclick = () => {
+    chosen = b.dataset.sz;
+    m.querySelectorAll('.pm-sz').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('pmHint').style.visibility = 'hidden';
+  });
+  m.querySelectorAll('[data-pm]').forEach(t => t.onclick = () => {
+    document.getElementById('pmMain').src = imgs[+t.dataset.pm];
+    m.querySelectorAll('[data-pm]').forEach(x => x.classList.toggle('on', x === t));
+  });
+  const main = document.getElementById('pmMain');
+  if (main) main.onclick = () => openLightbox(imgs, p.name, [...m.querySelectorAll('[data-pm]')].findIndex(x=>x.classList.contains('on')) || 0);
+  const chart = document.getElementById('pmChart');
+  if (chart) chart.onclick = () => openLightbox(['assets/img/size-chart.png'], 'Size Chart', 0);
+  const add = document.getElementById('pmAdd');
+  if (add && !oos) add.onclick = () => {
+    if (!chosen) { const h = document.getElementById('pmHint'); h.style.visibility = 'visible'; h.classList.add('shake'); setTimeout(()=>h.classList.remove('shake'),400); return; }
+    Store.addToCart(p.id, { size: chosen });
+    if (typeof refreshCart === 'function') refreshCart();
+    toast(`Added — ${p.name} (${chosen})`);
+    closeProductModal();
+  };
+}
+function closeProductModal() {
+  const m = document.getElementById('pmodal'); if (!m) return;
+  m.classList.remove('open'); document.body.style.overflow = '';
+}
