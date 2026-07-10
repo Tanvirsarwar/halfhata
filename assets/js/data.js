@@ -13,7 +13,7 @@ const HH = {
   codMinAdvance: 120,
   couriers: ['Steadfast', 'Pathao', 'RedX', 'Sundarban', 'Manual'],
   districts: ['Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapainawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj','Habiganj','Jamalpur','Jashore','Jhalokathi','Jhenaidah','Joypurhat','Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar','Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'],
-  sizes: ['S','M','L','XL','XXL'],
+  sizes: ['S','M','L','XL','XXL','XXXL','XXXXL'],
 };
 
 /* SVG garment illustration (no photo dependency) */
@@ -142,14 +142,15 @@ function openProductModal(id) {
         </div>
         <div class="pm-hint" id="pmHint">Please select a size to continue</div>
         <button class="btn btn-dark btn-block btn-lg" id="pmAdd" ${oos ? 'disabled' : ''}>${oos ? 'Out of Stock' : 'Add to Cart'}</button>
+        ${(() => { const ch = SIZE_CHARTS[p.kind === 'jersey' ? 'jersey' : 'tshirt']; return `
         <div class="pm-chart-wrap">
-          <div class="pm-chart-title">${SIZE_CHART.title}</div>
+          <div class="pm-chart-title">${ch.title}</div>
           <table class="sc-table">
-            <thead><tr>${SIZE_CHART.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
-            <tbody>${SIZE_CHART.rows.map(r => `<tr>${r.map((v,i) => i===0?`<td><b>${v}</b></td>`:`<td>${v}"</td>`).join('')}</tr>`).join('')}</tbody>
+            <thead><tr>${ch.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+            <tbody>${ch.rows.map(r => `<tr>${r.map((v,i) => i===0?`<td><b>${v}</b></td>`:`<td>${v}"</td>`).join('')}</tr>`).join('')}</tbody>
           </table>
-          <p class="sc-note">${SIZE_CHART.note}</p>
-        </div>
+          <p class="sc-note">${ch.note}</p>
+        </div>`; })()}
       </div>
     </div>`;
   m.classList.add('open');
@@ -185,19 +186,35 @@ function closeProductModal() {
 
 
 /* ================= SIZE CHART (built-in table) ================= */
-const SIZE_CHART = {
-  title: 'T-Shirt Size Chart',
-  note: 'Measurements in inches. Length = shoulder to hem · Width = chest, side to side.',
-  cols: ['Size', 'Length', 'Width'],
-  rows: [
-    ['S',   27, 38],
-    ['M',   28, 40],
-    ['L',   29, 42],
-    ['XL',  30, 44],
-    ['XXL', 31, 46],
-  ],
+const SIZE_CHARTS = {
+  tshirt: {
+    title: 'T-Shirt Size Chart',
+    note: 'Measurements in inches. Length = shoulder to hem · Width = chest, side to side.',
+    cols: ['Size', 'Length', 'Width'],
+    rows: [
+      ['S',   27, 38],
+      ['M',   28, 40],
+      ['L',   29, 42],
+      ['XL',  30, 44],
+      ['XXL', 31, 46],
+    ],
+  },
+  jersey: {
+    title: 'Jersey Size Chart',
+    note: 'Measurements in inches. Chest = side to side · Length = shoulder to hem.',
+    cols: ['Size', 'Chest', 'Length'],
+    rows: [
+      ['S',     36, 26],
+      ['M',     38, 27],
+      ['L',     40, 28],
+      ['XL',    42, 29],
+      ['XXL',   44, 30],
+      ['XXXL',  46, 31],
+      ['XXXXL', 48, 32],
+    ],
+  },
 };
-function openSizeChart() {
+function openSizeChart() { const SIZE_CHART = SIZE_CHARTS.tshirt;
   let sc = document.getElementById('scmodal');
   if (!sc) { sc = document.createElement('div'); sc.id = 'scmodal'; sc.className = 'scmodal'; document.body.appendChild(sc); }
   sc.innerHTML = `
