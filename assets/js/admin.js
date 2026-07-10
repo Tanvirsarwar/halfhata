@@ -458,7 +458,17 @@ function openDrawer(id) {
   const courierOpts = HH.couriers.map(c => `<option ${o.courier?.service===c?'selected':''}>${c}</option>`).join('');
   document.getElementById('drawer').innerHTML = `
     <div class="dh"><h3>#${esc(o.id)}</h3><button class="close" id="closeDrawer">${ic('x',18)}</button></div>
-    <div style="display:flex;gap:8px;margin-bottom:16px"><span class="pill ${statusPill[o.status]}">${o.status}</span><span class="pill pill-grey">${esc(o.payment.label)}</span></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px"><span class="pill ${statusPill[o.status]}">${o.status}</span><span class="pill pill-grey">${esc(o.payment.label)}</span>${o.custom ? '<span class="pill pill-blue">Custom Design 🎨</span>' : ''}</div>
+    ${o.custom ? `
+    <div class="dgroup"><div class="t">Custom Design</div>
+      <div class="kv"><span>Type</span><b>${esc(o.custom.type)}</b></div>
+      <div class="kv"><span>Fabric</span><b><span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${esc(o.custom.fabricHex || '#888')};border:1px solid #ccc;vertical-align:-2px;margin-right:6px"></span>${esc(o.custom.fabric)}</b></div>
+      <div class="kv"><span>Sizes</span><b>${(o.custom.breakdown || []).map(b => `${esc(b.size)}×${b.qty}`).join(' · ')}</b></div>
+      ${o.custom.bulkOff ? `<div class="kv"><span>Bulk discount</span><b>−${o.custom.bulkOff}%</b></div>` : ''}
+      ${o.custom.notes ? `<div class="kv"><span>Notes</span><b style="text-align:right;max-width:62%">${esc(o.custom.notes)}</b></div>` : ''}
+      <div class="adm-design"><img src="${esc(o.custom.designUrl)}" alt="design"></div>
+      <a class="btn btn-dark btn-block" style="margin-top:10px" href="${esc(o.custom.designUrl)}" download="${esc(o.custom.designName || 'design.png')}" target="_blank">${ic('download',16)} Download Design (original)</a>
+    </div>` : ''}
     <div class="dgroup"><div class="t">Customer</div>
       <div class="kv"><span>Name</span><b>${esc(o.customer.name)}</b></div>
       <div class="kv"><span>Phone</span><b>${esc(o.customer.phone)}</b></div>

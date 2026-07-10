@@ -27,6 +27,18 @@ window.SB = {
     } catch (e) { console.error('loadCatalog', e); }
   },
 
+  /* upload an ORIGINAL file (no re-compression — for print-quality designs) */
+  async uploadFile(file) {
+    if (!sb || !file) return null;
+    try {
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g,'') || 'png';
+      const path = 'design_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.' + ext;
+      const { error } = await sb.storage.from('product-images').upload(path, file, { contentType: file.type || 'image/png', upsert: true });
+      if (error) { console.error('upload design', error); return null; }
+      return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+    } catch (e) { console.error('uploadFile', e); return null; }
+  },
+
   /* upload a compressed dataURL to Storage, return its public URL */
   async uploadImage(dataUrl) {
     if (!sb || !dataUrl || !String(dataUrl).startsWith('data:')) return dataUrl || null;
@@ -103,7 +115,7 @@ window.SB = {
         customer: r.customer || {}, items: r.items || [],
         subtotal: Number(r.subtotal), delivery: Number(r.delivery), total: Number(r.total),
         payment: r.payment || {}, status: r.status || 'Pending',
-        courier: r.courier || null,
+        courier: r.courier || null, custom: r.custom || null,
         notifications: r.notifications || [], timeline: r.timeline || [],
       }));
       localStorage.setItem('hh_orders', JSON.stringify(orders));
@@ -118,7 +130,7 @@ window.SB = {
       customer: o.customer, items: o.items,
       subtotal: o.subtotal, delivery: o.delivery, total: o.total,
       payment: o.payment, status: o.status,
-      courier: o.courier, notifications: o.notifications, timeline: o.timeline,
+      courier: o.courier, custom: o.custom || null, notifications: o.notifications, timeline: o.timeline,
       user_email: (o.customer && o.customer.email) || null,
       phone: (o.customer && o.customer.phone) || null,
     };

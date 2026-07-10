@@ -14,6 +14,19 @@ const HH = {
   couriers: ['Steadfast', 'Pathao', 'RedX', 'Sundarban', 'Manual'],
   districts: ['Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapainawabganj','Chattogram','Chuadanga','Cox\'s Bazar','Cumilla','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj','Habiganj','Jamalpur','Jashore','Jhalokathi','Jhenaidah','Joypurhat','Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar','Munshiganj','Mymensingh','Naogaon','Narail','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'],
   sizes: ['S','M','L','XL','XXL','XXXL','XXXXL'],
+  custom: {
+    types: [
+      { id:'basic', label:'Basic Tee',      unit:450, desc:'Classic fit crew neck · 175 GSM cotton' },
+      { id:'drop',  label:'Drop Shoulder',  unit:550, desc:'Oversized drop-shoulder cut · 200 GSM' },
+    ],
+    fabricColors: [
+      { name:'Black', hex:'#141416' }, { name:'White', hex:'#f4f4f2' },
+      { name:'Navy', hex:'#1e2a4a' },  { name:'Maroon', hex:'#5e1a24' },
+      { name:'Forest', hex:'#1f3d2b' },{ name:'Sand', hex:'#d8c9a3' },
+      { name:'Grey', hex:'#8a8a8e' },  { name:'Sky', hex:'#7fb3d5' },
+    ],
+    bulkTiers: [ { min:10, off:5 }, { min:30, off:10 }, { min:60, off:15 } ], // % discount
+  },
 };
 
 /* SVG garment illustration (no photo dependency) */

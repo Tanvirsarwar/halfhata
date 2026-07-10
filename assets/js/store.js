@@ -72,6 +72,23 @@ const Store = (() => {
   const getOrders = () => read(K.orders, []);
   function nextId() { return 'HALF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase(); }
 
+  function placeCustomOrder({ customer, payment, custom, items, subtotal, delivery, total }) {
+    const order = {
+      id: nextId(), createdAt: new Date().toISOString(),
+      customer, items, subtotal, delivery, total,
+      payment: { ...payment, paid: Number(payment.amount) || 0, due: total - (Number(payment.amount) || 0),
+                 label: payment.method === 'full' ? 'Full Paid' : 'COD ৳' + payment.amount },
+      status: 'Pending', courier: null, custom,
+      notifications: [{ id: 'n0', at: new Date().toISOString(), title: 'Custom order received 🎨',
+        body: `We got your custom design order #`, read: false }],
+      timeline: [{ status: 'Pending', at: new Date().toISOString(), note: 'Custom design order placed' }],
+    };
+    order.notifications[0].body = `We got your custom design order #${order.id}. We'll review your artwork and confirm within 24 hours.`;
+    const orders = getOrders(); orders.unshift(order); write(K.orders, orders);
+    if (window.SB) SB.pushOrder(order);
+    return order;
+  }
+
   function placeOrder({ customer, payment }) {
     const lines = cartLines();
     const subtotal = cartSubtotal();
@@ -283,7 +300,7 @@ const Store = (() => {
 
   return { getCart, cartCount, cartLines, cartSubtotal, addToCart, setQty, setSize, removeLine, clearCart,
            getUser, setUser, logout, registerUser, loginUser, loginGoogle,
-           getOrders, getOrder, placeOrder, updateOrder, assignCourier, setStatus, seed,
+           getOrders, getOrder, placeOrder, placeCustomOrder, updateOrder, assignCourier, setStatus, seed,
            userOrders, userNotifications, unreadCount, markAllRead,
            analytics, revenueSeries, statusSplit, paymentSplit, topProducts, customers, recentActivity,
            isAdmin, adminLogin, adminLogout, resetAllData,
