@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custom Design — halfhata</title>
+<meta name="description" content="Upload your own design — we print it. From 1 piece to 100+. halfhata custom tees & drop shoulders.">
+<link rel="icon" href="assets/img/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="custom-page">
+
+  <!-- nav (dark) -->
+  <header class="nav cnav"><div class="container">
+    <a class="brand" href="index.html" style="color:#fff"><img src="assets/img/logo.jpeg" alt="halfhata"> halfhata</a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a><a href="index.html#new">Shop</a>
+      <a href="jersey.html">Jersey</a>
+      <a class="active nav-cta" href="custom.html">Custom Design</a>
+    </nav>
+    <div class="nav-icons">
+      <button title="Account" onclick="location.href='account.html'" id="navUser"></button>
+      <button title="Cart" onclick="location.href='checkout.html'"><span id="navCart"></span><span class="cart-badge hide" id="navCartBadge">0</span></button>
+    </div>
+  </div></header>
+
+  <!-- artistic hero -->
+  <section class="c-hero">
+    <div class="c-orb one"></div><div class="c-orb two"></div>
+    <div class="container">
+      <div class="c-kicker">✦ YOUR ART · OUR FABRIC ✦</div>
+      <h1>Print <span class="c-grad">Anything</span><br>You Can Imagine.</h1>
+      <p>Upload your design — we print &amp; deliver. From <b>1 piece</b> for yourself to <b>100+</b> for your team, brand or event.</p>
+      <div class="c-steps">
+        <span><b>1</b> Upload design</span><span class="c-arrow">→</span>
+        <span><b>2</b> Pick fabric</span><span class="c-arrow">→</span>
+        <span><b>3</b> Set sizes</span><span class="c-arrow">→</span>
+        <span><b>4</b> We deliver</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- order builder -->
+  <section class="c-builder"><div class="container">
+    <div class="c-grid">
+
+      <!-- LEFT: design + options -->
+      <div>
+        <div class="c-card">
+          <div class="c-num">01</div>
+          <h3>Upload your design</h3>
+          <label class="c-drop" id="dropZone">
+            <input type="file" id="designFile" accept="image/*" hidden>
+            <div id="dropInner">
+              <div class="c-drop-ic">⬆</div>
+              <b>Click to upload your artwork</b>
+              <small>PNG / JPG — high resolution prints best</small>
+            </div>
+          </label>
+        </div>
+
+        <div class="c-card">
+          <div class="c-num">02</div>
+          <h3>Choose your type</h3>
+          <div class="c-types" id="typeRow"></div>
+        </div>
+
+        <div class="c-card">
+          <div class="c-num">03</div>
+          <h3>Fabric color</h3>
+          <div class="c-colors" id="colorRow"></div>
+          <div class="c-color-name" id="colorName"></div>
+        </div>
+
+        <div class="c-card">
+          <div class="c-num">04</div>
+          <h3>Sizes &amp; quantity</h3>
+          <p class="c-sub">Set how many pieces of each size — mix freely for bulk orders.</p>
+          <div class="c-sizes" id="sizeGrid"></div>
+          <div class="c-bulk" id="bulkHint"></div>
+        </div>
+
+        <div class="c-card">
+          <div class="c-num">05</div>
+          <h3>Notes (optional)</h3>
+          <textarea id="cNotes" rows="3" placeholder="Print position, special instructions, deadline…" style="width:100%;padding:12px;border:1px solid #ffffff22;border-radius:12px;background:#ffffff0d;color:#fff"></textarea>
+        </div>
+      </div>
+
+      <!-- RIGHT: summary + checkout -->
+      <div class="c-side">
+        <div class="c-card c-sticky">
+          <h3 style="margin-bottom:4px">Your custom order</h3>
+          <div class="c-sum" id="cSummary"></div>
+          <div class="c-total-row"><span>Subtotal</span><b id="cSubtotal">৳0</b></div>
+          <div class="c-total-row"><span>Delivery</span><b id="cDelivery">৳80</b></div>
+          <div class="c-total-row c-grand"><span>Total</span><b id="cTotal">৳0</b></div>
+
+          <div id="cAuthWrap" style="margin-top:16px">
+            <div class="notice hide" id="cLogged" style="background:#12351f;color:#7ee2a0"></div>
+            <div id="authMount"></div>
+          </div>
+
+          <div id="cShipWrap" class="hide" style="margin-top:14px">
+            <div class="field"><label style="color:#ddd">Full name *</label><input id="c_name" placeholder="Your full name"></div>
+            <div class="field"><label style="color:#ddd">Phone *</label><input id="c_phone" placeholder="01XXXXXXXXX" maxlength="11"></div>
+            <div class="field"><label style="color:#ddd">District *</label><input id="c_district" list="cDistricts" placeholder="Type to search district"><datalist id="cDistricts"></datalist></div>
+            <div class="field"><label style="color:#ddd">Full address *</label><input id="c_address" placeholder="House, road, area"></div>
+            <div class="field"><label style="color:#ddd">Advance payment (min ৳120) — Nagad/bKash: <b id="cPayNum"></b></label>
+              <input id="c_txn" placeholder="Transaction ID *"></div>
+            <button class="btn btn-lg btn-block c-gold" id="cPlace">Place Custom Order ✦</button>
+            <small style="color:#8a8a90;display:block;margin-top:10px;text-align:center">We review every design &amp; confirm on WhatsApp within 24h.</small>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div></section>
+
+  <footer class="footer"><div class="container">
+    <a class="brand" href="index.html" style="color:#fff"><img src="assets/img/logo.jpeg" alt=""> halfhata</a>
+    <div class="pay" id="footerChannels"></div>
+    <div class="copyright">© 2026 halfhata. All rights reserved.</div>
+  </div></footer>
+
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/js/supabase.js"></script>
+  <script src="assets/js/auth.js"></script>
+  <script src="assets/js/custom.js"></script>
+</body>
+</html>
