@@ -326,6 +326,15 @@ function openProductForm(editId) {
     <small style="color:var(--muted);display:block;margin-top:10px;text-align:center">Products appear instantly on the home page.</small>`;
   renderDesignRows(!!editing);
   document.getElementById('closeDrawer').onclick = closeDrawer;
+  /* picking "Jersey" auto-ticks the full S–XXXXL range; back to T-shirt unticks the extras */
+  document.querySelectorAll('input[name=pKind]').forEach(r => r.addEventListener('change', () => {
+    if (editing) return;
+    const isJersey = document.querySelector('input[name=pKind]:checked').value === 'jersey';
+    document.querySelectorAll('.sizes-row input[type=checkbox]').forEach(c => {
+      if (isJersey) c.checked = true;
+      else if (['XXXL','XXXXL'].includes(c.value)) c.checked = false;
+    });
+  }));
   const addBtn = document.getElementById('addDesign');
   if (addBtn) addBtn.onclick = () => { designRows.push({ name:'', price:'', description:'', images: [] }); renderDesignRows(false); };
   document.getElementById('saveProd').onclick = () => saveProduct(editing);
