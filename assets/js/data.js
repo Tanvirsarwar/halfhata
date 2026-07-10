@@ -163,7 +163,7 @@ function openProductModal(id) {
   const main = document.getElementById('pmMain');
   if (main) main.onclick = () => openLightbox(imgs, p.name, [...m.querySelectorAll('[data-pm]')].findIndex(x=>x.classList.contains('on')) || 0);
   const chart = document.getElementById('pmChart');
-  if (chart) chart.onclick = () => openLightbox(['assets/img/size-chart.png'], 'Size Chart', 0);
+  if (chart) chart.onclick = openSizeChart;
   const add = document.getElementById('pmAdd');
   if (add && !oos) add.onclick = () => {
     if (!chosen) { const h = document.getElementById('pmHint'); h.style.visibility = 'visible'; h.classList.add('shake'); setTimeout(()=>h.classList.remove('shake'),400); return; }
@@ -177,3 +177,56 @@ function closeProductModal() {
   const m = document.getElementById('pmodal'); if (!m) return;
   m.classList.remove('open'); document.body.style.overflow = '';
 }
+
+
+/* ================= SIZE CHART (built-in table) ================= */
+const SIZE_CHART = {
+  title: 'T-Shirt Size Chart',
+  note: 'Measurements in inches. Length = shoulder to hem · Width = chest, side to side.',
+  cols: ['Size', 'Length', 'Width'],
+  rows: [
+    ['S',   27, 38],
+    ['M',   28, 40],
+    ['L',   29, 42],
+    ['XL',  30, 44],
+    ['XXL', 31, 46],
+  ],
+};
+function openSizeChart() {
+  let sc = document.getElementById('scmodal');
+  if (!sc) { sc = document.createElement('div'); sc.id = 'scmodal'; sc.className = 'scmodal'; document.body.appendChild(sc); }
+  sc.innerHTML = `
+    <div class="sc-card">
+      <button class="sc-close">&times;</button>
+      <h3>${SIZE_CHART.title}</h3>
+      <table class="sc-table">
+        <thead><tr>${SIZE_CHART.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+        <tbody>${SIZE_CHART.rows.map(r => `<tr>${r.map((v,i) => i===0?`<td><b>${v}</b></td>`:`<td>${v}"</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+      <p class="sc-note">${SIZE_CHART.note}</p>
+    </div>`;
+  sc.classList.add('open');
+  sc.querySelector('.sc-close').onclick = () => sc.classList.remove('open');
+  sc.onclick = e => { if (e.target === sc) sc.classList.remove('open'); };
+}
+
+/* ================= MOBILE MENU (hamburger) ================= */
+(function mobileNav() {
+  const navBar = document.querySelector('.nav');
+  const links = document.querySelector('.nav-links');
+  const icons = document.querySelector('.nav-icons');
+  if (!navBar || !links || !icons) return;
+  const btn = document.createElement('button');
+  btn.className = 'nav-burger'; btn.setAttribute('aria-label', 'menu');
+  btn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  icons.appendChild(btn);
+  const panel = document.createElement('div');
+  panel.className = 'mobile-menu';
+  panel.innerHTML = links.innerHTML;
+  navBar.appendChild(panel);
+  btn.onclick = e => { e.stopPropagation(); panel.classList.toggle('open'); };
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.mobile-menu') && !e.target.closest('.nav-burger')) panel.classList.remove('open');
+  });
+  panel.addEventListener('click', e => { if (e.target.closest('a')) panel.classList.remove('open'); });
+})();
