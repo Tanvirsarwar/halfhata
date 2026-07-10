@@ -136,13 +136,20 @@ function openProductModal(id) {
         <h2>${esc(p.name)}</h2>
         <div class="pm-price">${money(p.price)}</div>
         <div class="pm-desc">${descHtml(p.description) || '<p style="color:var(--muted)">Premium quality — crafted for comfort and built to last.</p>'}</div>
-        <div class="pm-size-head">Select Size <span class="req">*</span>
-          <button class="pm-chart" id="pmChart">Size Chart</button></div>
+        <div class="pm-size-head">Select Size <span class="req">*</span></div>
         <div class="pm-sizes" id="pmSizes">
           ${(p.sizes && p.sizes.length ? p.sizes : ['M','L','XL']).map(sz => `<button class="pm-sz" data-sz="${esc(sz)}">${esc(sz)}</button>`).join('')}
         </div>
         <div class="pm-hint" id="pmHint">Please select a size to continue</div>
         <button class="btn btn-dark btn-block btn-lg" id="pmAdd" ${oos ? 'disabled' : ''}>${oos ? 'Out of Stock' : 'Add to Cart'}</button>
+        <div class="pm-chart-wrap">
+          <div class="pm-chart-title">${SIZE_CHART.title}</div>
+          <table class="sc-table">
+            <thead><tr>${SIZE_CHART.cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+            <tbody>${SIZE_CHART.rows.map(r => `<tr>${r.map((v,i) => i===0?`<td><b>${v}</b></td>`:`<td>${v}"</td>`).join('')}</tr>`).join('')}</tbody>
+          </table>
+          <p class="sc-note">${SIZE_CHART.note}</p>
+        </div>
       </div>
     </div>`;
   m.classList.add('open');
@@ -162,8 +169,6 @@ function openProductModal(id) {
   });
   const main = document.getElementById('pmMain');
   if (main) main.onclick = () => openLightbox(imgs, p.name, [...m.querySelectorAll('[data-pm]')].findIndex(x=>x.classList.contains('on')) || 0);
-  const chart = document.getElementById('pmChart');
-  if (chart) chart.onclick = openSizeChart;
   const add = document.getElementById('pmAdd');
   if (add && !oos) add.onclick = () => {
     if (!chosen) { const h = document.getElementById('pmHint'); h.style.visibility = 'visible'; h.classList.add('shake'); setTimeout(()=>h.classList.remove('shake'),400); return; }
