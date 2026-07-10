@@ -63,6 +63,15 @@ const Store = (() => {
     setUser({ ...(getUser() || {}), email, name:u.name || '', provider:'email' });
     return { ok:true };
   }
+  async function resetPassword(email, newPassword) {
+    email = (email || '').trim().toLowerCase();
+    const users = getUsers();
+    if (!users[email]) return { ok:false, error:'No email account found. If you signed up with Google, just use "Continue with Google" — no password needed.' };
+    users[email].passHash = await sha256(newPassword);
+    write('hh_users', users);
+    return { ok:true };
+  }
+
   function loginGoogle(email) {
     setUser({ ...(getUser() || {}), email:(email || '').trim().toLowerCase(), provider:'google' });
     return { ok:true };
@@ -299,7 +308,7 @@ const Store = (() => {
   }
 
   return { getCart, cartCount, cartLines, cartSubtotal, addToCart, setQty, setSize, removeLine, clearCart,
-           getUser, setUser, logout, registerUser, loginUser, loginGoogle,
+           getUser, setUser, logout, registerUser, loginUser, loginGoogle, resetPassword,
            getOrders, getOrder, placeOrder, placeCustomOrder, updateOrder, assignCourier, setStatus, seed,
            userOrders, userNotifications, unreadCount, markAllRead,
            analytics, revenueSeries, statusSplit, paymentSplit, topProducts, customers, recentActivity,
