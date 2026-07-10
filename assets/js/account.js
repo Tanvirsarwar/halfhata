@@ -38,14 +38,55 @@ function render() {
         : '<div class="empty">You have no orders yet. <a href="index.html" style="font-weight:600">Start shopping →</a></div>'}
     </div>
 
-    <div class="panel"><h3 style="margin-bottom:12px">Saved details</h3>
-      <div class="kv"><span>Name</span><b>${esc(u.name||'—')}</b></div>
-      <div class="kv"><span>Phone</span><b>${esc(u.phone||'—')}</b></div>
-      <div class="kv"><span>City</span><b>${esc(u.city||'—')}</b></div>
-      <div class="kv"><span>Address</span><b style="text-align:right;max-width:60%">${esc(u.address||'—')}</b></div>
-      <small style="color:var(--muted);display:block;margin-top:8px">These autofill at checkout for faster ordering.</small>
+    <div class="panel"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h3>Saved details</h3><button class="btn btn-light" id="editDetails" style="padding:7px 14px">${ic('settings',15)} Edit</button></div>
+      <div id="detailsView">
+        <div class="kv"><span>Name</span><b>${esc(u.name||'—')}</b></div>
+        <div class="kv"><span>Phone</span><b>${esc(u.phone||'—')}</b></div>
+        <div class="kv"><span>District</span><b>${esc(u.district||'—')}</b></div>
+        <div class="kv"><span>City / Area</span><b>${esc(u.city||'—')}</b></div>
+        <div class="kv"><span>Address</span><b style="text-align:right;max-width:60%">${esc(u.address||'—')}</b></div>
+        <small style="color:var(--muted);display:block;margin-top:8px">These autofill at checkout for faster ordering.</small>
+      </div>
+      <div id="detailsEdit" class="hide">
+        <div class="field"><label>Full name</label><input id="e_name" value="${esc(u.name||'')}" placeholder="Your full name"></div>
+        <div class="row2">
+          <div class="field"><label>Phone</label><input id="e_phone" value="${esc(u.phone||'')}" placeholder="01XXXXXXXXX" maxlength="11"></div>
+          <div class="field"><label>District</label><input id="e_district" list="eDistricts" value="${esc(u.district||'')}" placeholder="Type to search"><datalist id="eDistricts">${HH.districts.map(d=>`<option value="${d}">`).join('')}</datalist></div>
+        </div>
+        <div class="field"><label>City / Area</label><input id="e_city" value="${esc(u.city||'')}" placeholder="Area / thana"></div>
+        <div class="field"><label>Full address</label><input id="e_address" value="${esc(u.address||'')}" placeholder="House, road, area"></div>
+        <div class="auth-msg err hide" id="eMsg"></div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-dark" id="saveDetails" style="flex:1">Save changes</button>
+          <button class="btn btn-light" id="cancelEdit" style="flex:1">Cancel</button>
+        </div>
+      </div>
     </div>`;
   document.getElementById('logout').onclick = () => { Store.logout(); render(); };
+  const eBtn = document.getElementById('editDetails');
+  if (eBtn) eBtn.onclick = () => {
+    document.getElementById('detailsView').classList.toggle('hide');
+    document.getElementById('detailsEdit').classList.toggle('hide');
+  };
+  const cBtn = document.getElementById('cancelEdit');
+  if (cBtn) cBtn.onclick = () => {
+    document.getElementById('detailsView').classList.remove('hide');
+    document.getElementById('detailsEdit').classList.add('hide');
+  };
+  const sBtn = document.getElementById('saveDetails');
+  if (sBtn) sBtn.onclick = () => {
+    const name = document.getElementById('e_name').value.trim();
+    const phone = document.getElementById('e_phone').value.trim();
+    const district = document.getElementById('e_district').value.trim();
+    const city = document.getElementById('e_city').value.trim();
+    const address = document.getElementById('e_address').value.trim();
+    const msg = document.getElementById('eMsg');
+    if (phone && !/^01\d{9}$/.test(phone)) { msg.textContent = 'Phone must be 11 digits starting with 01'; msg.classList.remove('hide'); return; }
+    Store.setUser({ ...Store.getUser(), name, phone, district, city, address });
+    toast('Details saved ✓');
+    render();
+  };
   const mr = document.getElementById('markRead'); if (mr) mr.onclick = () => { Store.markAllRead(); render(); };
 }
 (async () => { if (window.SB) await SB.loadOrders(); render(); })();
