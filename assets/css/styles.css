@@ -483,3 +483,32 @@ img.pimg{cursor:zoom-in}
 .pm-hint.shake{animation:shakex .3s}
 @keyframes shakex{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .oos-btn{background:#e9e7e3;color:#8a8a8e;cursor:not-allowed}
+
+/* ---- size chart popup ---- */
+.scmodal{position:fixed;inset:0;z-index:410;background:#000a;display:none;align-items:center;justify-content:center;padding:20px}
+.scmodal.open{display:flex}
+.sc-card{background:#fff;border-radius:18px;padding:26px;width:min(380px,100%);position:relative;box-shadow:var(--shadow-lg)}
+.sc-card h3{font-size:18px;margin-bottom:14px}
+.sc-close{position:absolute;top:10px;right:12px;width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff}
+.sc-close:hover{background:#f4f4f4}
+.sc-table{width:100%;border-collapse:collapse;font-size:14px}
+.sc-table th{background:var(--black);color:#fff;padding:9px;text-align:center;font-size:12.5px;letter-spacing:.03em}
+.sc-table th:first-child{border-radius:9px 0 0 0}
+.sc-table th:last-child{border-radius:0 9px 0 0}
+.sc-table td{padding:9px;text-align:center;border-bottom:1px solid var(--line)}
+.sc-table tbody tr:nth-child(even){background:#faf9f7}
+.sc-note{color:var(--muted);font-size:12px;margin-top:12px;line-height:1.5}
+
+/* ---- mobile hamburger menu ---- */
+.nav-burger{display:none;color:#333}
+.mobile-menu{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border-bottom:1px solid var(--line);box-shadow:var(--shadow-lg);padding:10px 20px 16px;z-index:60}
+.mobile-menu.open{display:flex;flex-direction:column;gap:2px}
+.mobile-menu a{padding:12px 8px;font-size:15px;font-weight:500;color:#222;border-bottom:1px solid #f2f1ef}
+.mobile-menu a:last-child{border-bottom:none}
+.mobile-menu a.active{font-weight:700}
+.mobile-menu a.nav-cta{margin-top:10px;text-align:center;border-bottom:none;padding:11px}
+@media(max-width:900px){
+  .nav-burger{display:flex}
+  .nav{position:sticky}
+  .nav .container{position:relative}
+}
