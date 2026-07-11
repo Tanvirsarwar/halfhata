@@ -41,6 +41,32 @@ function renderGrids() {
 }
 
 function renderChrome() {
+  /* trust strip */
+  put('trustRow', [
+    ['truck','Free Delivery','On orders above ৳1,500'],
+    ['refresh','Easy Returns','Hassle-free exchange'],
+    ['lock','Secure Payment','bKash, Nagad & COD'],
+    ['check','100% Authentic','Premium 175 GSM cotton'],
+    ['wa','WhatsApp Support','0199210064'],
+  ].map(([i,t,d]) => `<div class="ti"><div class="ic">${ic(i,20)}</div><div><b>${t}</b><small>${d}</small></div></div>`).join(''));
+
+  /* hero slider */
+  (function slider(){
+    const slides = [...document.querySelectorAll('.hslide')];
+    if (!slides.length) return;
+    let cur = 0, timer;
+    const count = document.getElementById('hsCount');
+    function show(i){
+      cur = (i + slides.length) % slides.length;
+      slides.forEach((s, k) => s.classList.toggle('on', k === cur));
+      if (count) count.textContent = String(cur+1).padStart(2,'0') + ' / ' + String(slides.length).padStart(2,'0');
+    }
+    function auto(){ clearInterval(timer); timer = setInterval(() => show(cur+1), 5500); }
+    const p = document.getElementById('hsPrev'), n = document.getElementById('hsNext');
+    if (p) p.onclick = () => { show(cur-1); auto(); };
+    if (n) n.onclick = () => { show(cur+1); auto(); };
+    auto();
+  })();
   put('navBell', ic('bell', 22));
   put('navUser', ic('user', 22));
   put('navCart', ic('cart', 22));
@@ -54,15 +80,6 @@ function renderChrome() {
     <a class="it" href="mailto:${HH.email}"><span class="ficon">${ic('mail',15)}</span><div><b>Email</b><small>${HH.email}</small></div></a>
     <a class="it" href="https://wa.me/88${HH.phone}" target="_blank"><span class="ficon wa">${ic('wa',15)}</span><div><b>WhatsApp</b><small>${HH.phone}</small></div></a>`);
 
-  const feats = [
-    ['shield','Premium Quality','Comfort & Durable'],
-    ['tee','Stylish Designs','For Every Occasion'],
-    ['wallet','Cash on Delivery','All Over Bangladesh'],
-    ['box','Easy Returns','Hassle Free'],
-    ['truck','Fast Delivery','Reliable & Secure'],
-  ];
-  put('features', feats.map(([i, t, s]) =>
-    `<div class="feature"><div class="ic">${ic(i, 22)}</div><div><b>${t}</b><small>${s}</small></div></div>`).join(''));
 
   const wa = HH.channels[0];
   const waEl = document.getElementById('waFloat');

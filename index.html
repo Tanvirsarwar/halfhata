@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>halfhata — Wear Your Style. Own Your Identity.</title>
-<meta name="description" content="halfhata — premium quality clothing crafted for you. Cash on Delivery all over Bangladesh.">
+<title>halfhata — Premium Clothing, Crafted in Bangladesh</title>
+<meta name="description" content="halfhata — premium tees, jerseys & custom prints. Cash on Delivery across all 64 districts of Bangladesh.">
 <link rel="icon" href="assets/img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Serif+Bengali:wght@600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
@@ -38,33 +38,120 @@
     </div>
   </div></header>
 
-  <!-- hero (static banner — drop your image at assets/img/hero.png) -->
-  <section class="hero"><div class="hero-overlay"></div><div class="container">
-    <div class="hero-content">
-      <a class="btn btn-lg hero-btn" href="#new">Shop Now <span id="heroArrow"></span></a>
+  <!-- hero slider -->
+  <section class="hslider" id="hslider">
+    <div class="hslide on" style="background-image:url('assets/img/hero.png')">
+      <div class="shade"></div>
+      <div class="container"><div class="hs-content">
+        <span class="hk">New Season · 2026</span>
+        <h1>Wear Your Style.<br>Own Your Identity.</h1>
+        <p>Premium 175 GSM cotton, crafted in Bangladesh.</p>
+        <a class="btn btn-lg hero-btn" href="#new">Shop the Collection</a>
+      </div></div>
     </div>
-  </div></section>
+    <div class="hslide" style="background-image:url('assets/img/jersey-hero.png')">
+      <div class="shade"></div>
+      <div class="container"><div class="hs-content">
+        <span class="hk">The Jersey Arena</span>
+        <h1>Wear the Colors.<br>Own the Game.</h1>
+        <p>Club kits &amp; custom jerseys, S to XXXXL.</p>
+        <a class="btn btn-lg hero-btn" href="jersey.html">Explore Jerseys</a>
+      </div></div>
+    </div>
+    <div class="hslide" style="background-image:linear-gradient(135deg,#1B1410,#4A3728 60%,#8B6914)">
+      <div class="shade"></div>
+      <div class="container"><div class="hs-content">
+        <span class="hk">Custom Design Studio</span>
+        <h1>Your Art.<br>Printed &amp; Delivered.</h1>
+        <p>Upload any design — 1 piece or 100+, DTF printed.</p>
+        <a class="btn btn-lg hero-btn" href="custom.html">Start Designing</a>
+      </div></div>
+    </div>
+    <div class="hs-nav"><div class="container">
+      <span class="hs-count" id="hsCount">01 / 03</span>
+      <div class="hs-arrows">
+        <button id="hsPrev" aria-label="previous">‹</button>
+        <button id="hsNext" aria-label="next">›</button>
+      </div>
+    </div></div>
+  </section>
 
-  <!-- feature strip -->
-  <div class="container"><div class="features" id="features"></div></div>
+  <!-- trust strip -->
+  <div class="trust"><div class="container" id="trustRow"></div></div>
 
   <!-- new arrivals -->
   <section class="section" id="new"><div class="container">
-    <div class="section-head"><h2>New Arrivals</h2><a href="#best">View All <span id="va1"></span></a></div>
+    <div class="section-head"><div><span class="kicker">Just In</span><h2>New Arrivals</h2></div><a class="view-all" href="#best">View All <span id="va1"></span></a></div>
     <div class="grid" id="gridNew"></div>
+  </div></section>
+
+  <!-- editorial collections -->
+  <section class="section" style="padding-top:0"><div class="container">
+    <div class="section-head"><div><span class="kicker">Curated</span><h2>Explore halfhata</h2></div></div>
+    <div class="edit-grid">
+      <a class="edit-card big" href="custom.html" style="background-image:linear-gradient(135deg,#1B1410,#4A3728 55%,#8B6914)">
+        <div class="shade"></div>
+        <div class="ec"><span class="hk">Limited · Made For You</span><h3>Custom Design Studio</h3>
+          <span class="btn hero-btn">Print Your Own</span></div>
+      </a>
+      <a class="edit-card" href="jersey.html" style="background-image:url('assets/img/jersey-hero.png')">
+        <div class="shade"></div>
+        <div class="ec"><span class="hk">Club &amp; Custom Kits</span><h3>The Jersey Arena</h3></div>
+      </a>
+      <a class="edit-card" href="track.html" style="background-image:url('assets/img/hero.png')">
+        <div class="shade"></div>
+        <div class="ec"><span class="hk">Already Ordered?</span><h3>Track Your Order</h3></div>
+      </a>
+    </div>
   </div></section>
 
   <!-- best sellers -->
   <section class="section" id="best" style="padding-top:0"><div class="container">
-    <div class="section-head"><h2>Best Sellers</h2><a href="#new">View All <span id="va2"></span></a></div>
+    <div class="section-head"><div><span class="kicker">Most Loved</span><h2>Best Sellers</h2></div><a class="view-all" href="#new">View All <span id="va2"></span></a></div>
     <div class="grid" id="gridBest"></div>
   </div></section>
 
-  <!-- footer -->
-  <footer class="footer" id="footer"><div class="container">
-    <a class="brand" href="index.html" style="color:#fff"><img src="assets/img/logo.jpeg" alt=""> halfhata</a>
-    <div class="pay" id="footerChannels"></div>
-    <div class="copyright">© 2026 halfhata. All rights reserved. &nbsp;·&nbsp; Premium quality clothing crafted in Bangladesh.</div>
+  <!-- newsletter band -->
+  <section class="newsband"><div class="container">
+    <div><h3>Stay Connected</h3><p>New drops, custom-print offers &amp; jersey releases — straight to your WhatsApp.</p></div>
+    <div class="nb-cta"><a href="https://wa.me/880199210064?text=Hi%20halfhata%2C%20add%20me%20to%20updates" target="_blank">Join on WhatsApp</a></div>
+  </div></section>
+
+  <!-- mega footer -->
+  <footer class="mfooter" id="footer"><div class="container">
+    <div class="cols">
+      <div>
+        <a class="brand" href="index.html"><img src="assets/img/logo.jpeg" alt=""> halfhata</a>
+        <p class="about">Premium quality clothing crafted in Bangladesh. Every tee, jersey and custom print — made with obsession, delivered with care.</p>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <ul>
+          <li><a href="#new">New Arrivals</a></li>
+          <li><a href="#best">Best Sellers</a></li>
+          <li><a href="jersey.html">Jerseys</a></li>
+          <li><a href="custom.html">Custom Design</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Help</h4>
+        <ul>
+          <li><a href="track.html">Track Order</a></li>
+          <li><a href="#" onclick="openSizeChart();return false">Size Guide</a></li>
+          <li><a href="account.html">My Account</a></li>
+          <li><a href="https://wa.me/880199210064" target="_blank">Contact Us</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <div class="pay" id="footerChannels"></div>
+        <div class="accept"><span>bKash</span><span>Nagad</span><span>Cash on Delivery</span></div>
+      </div>
+    </div>
+    <div class="basebar">
+      <span>© 2026 halfhata. All rights reserved.</span>
+      <span>Crafted in Bangladesh 🇧🇩</span>
+    </div>
   </div></footer>
 
   <!-- floating order bar -->
@@ -76,7 +163,6 @@
     <button class="btn btn-dark btn-lg" onclick="goCheckout()">Order Now <span id="obArrow"></span></button>
   </div></div>
 
-  <!-- whatsapp float -->
   <a class="wa-float" id="waFloat" target="_blank" title="Chat on WhatsApp"></a>
 
   <script src="assets/js/data.js"></script>

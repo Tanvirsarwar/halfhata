@@ -35,7 +35,6 @@ function renderJerseys() {
 }
 
 function renderChrome() {
-  document.getElementById('navSearch').innerHTML = ic('search', 22);
   document.getElementById('navBell').innerHTML = ic('bell', 22);
   document.getElementById('navUser').innerHTML = ic('user', 22);
   document.getElementById('navCart').innerHTML = ic('cart', 22);
