@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>halfhata — The Story of a Tee</title>
+<meta name="description" content="Scroll through the making of a halfhata tee — from thread to your doorstep.">
+<link rel="icon" href="assets/img/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#dfe6f2;color:#1c1c22;overflow-x:hidden}
+  #world{position:fixed;inset:0;z-index:1}
+  #spacer{height:820vh}
+  .cap{position:fixed;z-index:5;left:50%;transform:translateX(-50%) translateY(14px);bottom:11vh;text-align:center;
+       opacity:0;transition:opacity .6s ease, transform .6s ease;pointer-events:none;width:min(680px,92vw)}
+  .cap.on{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .cap .k{letter-spacing:.35em;font-size:11px;font-weight:800;color:#c4761a;text-transform:uppercase}
+  .cap h2{font-size:clamp(30px,5.4vw,54px);font-weight:900;line-height:1.04;letter-spacing:-.03em;margin:10px 0 8px;color:#17171c;
+          text-shadow:0 2px 24px rgba(255,255,255,.7)}
+  .cap p{color:#3c3f48;font-size:16px;font-weight:500;text-shadow:0 1px 12px rgba(255,255,255,.8)}
+  .cap.dark h2{color:#fff;text-shadow:0 4px 28px rgba(0,0,0,.5)}
+  .cap.dark p{color:#e6e6ec;text-shadow:0 2px 12px rgba(0,0,0,.5)}
+  .cap.dark .k{color:#ffd257}
+  .grad{background:linear-gradient(90deg,#e8a020,#ef6a2a);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .cta-row{display:flex;gap:12px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+  .cta{display:inline-block;padding:14px 28px;border-radius:12px;font-weight:800;font-size:15px;text-decoration:none;transition:.15s}
+  .cta.gold{background:linear-gradient(135deg,#ffd257,#f79020,#ef5a2a);color:#1a1408;box-shadow:0 14px 34px rgba(230,130,40,.45)}
+  .cta.ghost{border:1.5px solid #1c1c2255;color:#1c1c22;background:#ffffffaa;backdrop-filter:blur(4px)}
+  .cta:hover{transform:translateY(-2px)}
+  #hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:6;color:#4a4d58;font-size:11px;
+        letter-spacing:.25em;text-transform:uppercase;font-weight:700;transition:opacity .5s;display:flex;flex-direction:column;align-items:center;gap:8px}
+  #hint .mouse{width:22px;height:36px;border:2px solid #4a4d5877;border-radius:12px;position:relative}
+  #hint .mouse::after{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:3px;height:8px;background:#e8862a;border-radius:3px;animation:wheel 1.4s infinite}
+  @keyframes wheel{0%{opacity:1;top:6px}70%{opacity:0;top:18px}100%{opacity:0}}
+  #brandbar{position:fixed;top:0;left:0;right:0;z-index:7;display:flex;justify-content:space-between;align-items:center;padding:18px 26px}
+  #brandbar a{color:#17171c;text-decoration:none;font-weight:900;font-size:20px;letter-spacing:-.02em}
+  #brandbar .back{font-size:13px;font-weight:700;color:#3c3f48;border:1.5px solid #1c1c2233;border-radius:999px;padding:8px 16px;background:#ffffff88;backdrop-filter:blur(6px)}
+  #brandbar .back:hover{border-color:#1c1c2277}
+  #progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#ffd257,#ef5a2a);z-index:8;width:0%}
+  #loader{position:fixed;inset:0;background:#dfe6f2;z-index:99;display:flex;align-items:center;justify-content:center;
+          font-weight:800;letter-spacing:.3em;font-size:12px;color:#c4761a;transition:opacity .7s}
+  #loader.gone{opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="loader">SPINNING THE THREAD…</div>
+<div id="progress"></div>
+<div id="brandbar"><a href="index.html">halfhata</a><a class="back" href="index.html">Enter Store →</a></div>
+<canvas id="world"></canvas>
+<div id="spacer"></div>
+
+<div class="cap on" id="cap0">
+  <div class="k">✦ scroll to begin ✦</div>
+  <h2>Every tee begins<br>with a <span class="grad">single knit</span>.</h2>
+  <p>You're looking at it. Scroll.</p>
+</div>
+<div class="cap" id="cap1">
+  <div class="k">chapter 01 · the fabric</div>
+  <h2>175 GSM combed cotton.<br><span class="grad">Softness</span> you can see.</h2>
+  <p>Ringspun, compact, preshrunk — born above the clouds.</p>
+</div>
+<div class="cap" id="cap2">
+  <div class="k">chapter 02 · the tees</div>
+  <h2>Cut into tees<br>you'll <span class="grad">live in</span>.</h2>
+  <p>Every colorway of the halfhata collection, floating by.</p>
+</div>
+<div class="cap" id="cap3">
+  <div class="k">chapter 03 · the jerseys</div>
+  <h2>And jerseys built<br>for the <span class="grad">game</span>.</h2>
+  <p>Club stripes, bold numbers — S to XXXXL.</p>
+</div>
+<div class="cap dark" id="cap4">
+  <div class="k">chapter 04 · the print</div>
+  <h2>Your design,<br><span class="grad">heat-pressed</span> in DTF.</h2>
+  <p>Watch the film lay your art onto the cotton — scroll slowly.</p>
+</div>
+<div class="cap dark" id="cap5">
+  <div class="k">chapter 05 · the pack</div>
+  <h2>Folded by hand.<br><span class="grad">Packed</span> with care.</h2>
+  <p>Sleeves in, hem up, into the box — sealed for the road.</p>
+</div>
+<div class="cap" id="cap6">
+  <div class="k">chapter 06 · the door</div>
+  <h2>Delivered to<br><span class="grad">your doorstep</span>.</h2>
+  <p>Cash on delivery, all 64 districts of Bangladesh.</p>
+  <div class="cta-row">
+    <a class="cta gold" href="index.html">Shop the Collection</a>
+    <a class="cta ghost" href="custom.html">Print Your Own</a>
+  </div>
+</div>
+
+<div id="hint"><div class="mouse"></div>SCROLL</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ═══════════ halfhata story-world · realistic scroll scrub ═══════════ */
+const canvas = document.getElementById('world');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xe9dfc9, 26, 95);
+const camera = new THREE.PerspectiveCamera(48, 1, .05, 300);
+
+/* ---------- dawn sky dome ---------- */
+(function sky() {
+  const cv = document.createElement('canvas'); cv.width = 2; cv.height = 512;
+  const x = cv.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0, '#9db4dd'); g.addColorStop(.45, '#d9d3cf');
+  g.addColorStop(.72, '#f3d9b0'); g.addColorStop(1, '#f6c98e');
+  x.fillStyle = g; x.fillRect(0, 0, 2, 512);
+  const t = new THREE.CanvasTexture(cv);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(150, 24, 18),
+    new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide, fog: false }));
+  scene.add(dome);
+})();
+
+/* ---------- lights ---------- */
+scene.add(new THREE.HemisphereLight(0xcfd8ee, 0xb8946a, .95));
+const sun = new THREE.DirectionalLight(0xffe7c4, 1.5);
+sun.position.set(-14, 18, 10); scene.add(sun);
+const rim = new THREE.DirectionalLight(0xaec4ff, .5);
+rim.position.set(14, 8, -16); scene.add(rim);
+const labLight = new THREE.PointLight(0xffb066, 0, 30);   // warms up in the print scene
+scene.add(labLight);
+
+/* ═══════════ textures ═══════════ */
+function knitTexture(res = 512, stitch = 10) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = res;
+  const x = cv.getContext('2d');
+  x.fillStyle = '#bdbdbd'; x.fillRect(0, 0, res, res);
+  const rows = res / stitch;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < rows; c++) {
+    const px = c * stitch + (r % 2 ? stitch / 2 : 0), py = r * stitch, s = stitch;
+    // left leg of the V (lit)
+    x.strokeStyle = 'rgba(255,255,255,.6)'; x.lineWidth = s * .3; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(px + s*.1, py + s*.85); x.quadraticCurveTo(px + s*.22, py + s*.35, px + s*.5, py + s*.12); x.stroke();
+    // right leg (shadow)
+    x.strokeStyle = 'rgba(30,30,30,.42)';
+    x.beginPath(); x.moveTo(px + s*.5, py + s*.12); x.quadraticCurveTo(px + s*.78, py + s*.35, px + s*.9, py + s*.85); x.stroke();
+    // yarn noise
+    x.fillStyle = `rgba(${180+Math.random()*60|0},${180+Math.random()*60|0},${180+Math.random()*60|0},.1)`;
+    x.fillRect(px, py, s, s);
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+const KNIT = knitTexture();                    // shared, tinted by material color
+const KNIT_MACRO = knitTexture(1024, 34);      // hero close-up detail
+
+function ribTexture() {                        // collar ribbing
+  const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
+  const x = cv.getContext('2d');
+  for (let i = 0; i < 64; i += 4) {
+    x.fillStyle = i % 8 ? '#8f8f8f' : '#d8d8d8';
+    x.fillRect(i, 0, 4, 64);
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 1);
+  return t;
+}
+const RIB = ribTexture();
+
+function printTexture(kind) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const x = cv.getContext('2d'); x.clearRect(0, 0, 256, 256);
+  if (kind === 'logo') {
+    const g = x.createLinearGradient(0, 0, 256, 256);
+    g.addColorStop(0, '#ffd257'); g.addColorStop(.5, '#f79020'); g.addColorStop(1, '#ef5a2a');
+    x.fillStyle = g; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '900 140px Inter, sans-serif'; x.fillText('hh', 128, 112);
+    x.font = '800 30px Inter'; x.fillText('HALFHATA', 128, 202);
+  } else if (kind === 'art') {
+    const cols = ['#ef5a2a', '#2e6fd8', '#22a06b', '#ffd257', '#e14aa0'];
+    for (let i = 0; i < 26; i++) {
+      x.fillStyle = cols[i % 5]; x.globalAlpha = .9;
+      x.beginPath(); x.arc(38 + Math.random()*180, 30 + Math.random()*160, 7 + Math.random()*20, 0, 7); x.fill();
+    }
+    x.globalAlpha = 1; x.fillStyle = '#17171c'; x.font = '900 40px Inter'; x.textAlign = 'center';
+    x.fillText('YOUR ART', 128, 230);
+  } else if (kind === 'wing') {
+    x.strokeStyle = '#17171c'; x.lineWidth = 9; x.lineCap = 'round';
+    for (let i = 0; i < 5; i++) {
+      x.beginPath(); x.moveTo(128, 150);
+      x.quadraticCurveTo(128 - 30 - i*18, 90 - i*10, 128 - 60 - i*20, 130 - i*16); x.stroke();
+      x.beginPath(); x.moveTo(128, 150);
+      x.quadraticCurveTo(128 + 30 + i*18, 90 - i*10, 128 + 60 + i*20, 130 - i*16); x.stroke();
+    }
+  }
+  return new THREE.CanvasTexture(cv);
+}
+
+function stripeNumberTexture(c1, c2, num) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const x = cv.getContext('2d');
+  x.fillStyle = c1; x.fillRect(0, 0, 256, 256);
+  x.fillStyle = c2;
+  for (let i = 0; i < 256; i += 64) x.fillRect(i, 0, 32, 256);
+  x.fillStyle = '#ffffff'; x.strokeStyle = '#00000055'; x.lineWidth = 6;
+  x.font = '900 130px Inter'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.strokeText(num, 128, 128); x.fillText(num, 128, 128);
+  return new THREE.CanvasTexture(cv);
+}
+
+/* ═══════════ garment builder (extruded silhouettes, foldable) ═══════════ */
+const FABMAT = (color, map = KNIT, rep = 2.2) => {
+  const m = map.clone(); m.needsUpdate = true;
+  m.wrapS = m.wrapT = THREE.RepeatWrapping; m.repeat.set(rep, rep);
+  return new THREE.MeshStandardMaterial({
+    color, map: m, bumpMap: m, bumpScale: .015, roughness: .96, metalness: 0 });
+};
+function extrudeShape(shape, mat, depth = .1) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: .02, bevelSize: .025, bevelSegments: 2, curveSegments: 10 });
+  return new THREE.Mesh(g, mat);
+}
+function torsoShape(w, h, r) {                     // rounded rect (origin at bottom-center)
+  const s = new THREE.Shape();
+  s.moveTo(-w/2 + r, 0);
+  s.lineTo(w/2 - r, 0); s.quadraticCurveTo(w/2, 0, w/2, r);
+  s.lineTo(w/2, h - r); s.quadraticCurveTo(w/2, h, w/2 - r, h);
+  s.lineTo(-w/2 + r, h); s.quadraticCurveTo(-w/2, h, -w/2, h - r);
+  s.lineTo(-w/2, r); s.quadraticCurveTo(-w/2, 0, -w/2 + r, 0);
+  return s;
+}
+function sleeveShape() {                           // origin at shoulder joint
+  const s = new THREE.Shape();
+  s.moveTo(0, .08); s.lineTo(.62, -.18); s.lineTo(.52, -.62); s.lineTo(0, -.5);
+  s.quadraticCurveTo(-.05, -.2, 0, .08);
+  return s;
+}
+/* tee = lower torso (hinged at waist), upper torso, 2 sleeves (hinged at shoulders), collar, optional print */
+function makeTee({ color = 0xffffff, texture = null, print = null, rep = 2.2 } = {}) {
+  const mat = texture
+    ? new THREE.MeshStandardMaterial({ color: 0xffffff, map: texture, bumpMap: KNIT, bumpScale: .012, roughness: .95 })
+    : FABMAT(color, KNIT, rep);
+  const g = new THREE.Group();
+
+  const lower = extrudeShape(torsoShape(1.34, .8, .1), mat);      // waist→chest hinge at its top
+  lower.geometry.translate(0, -.8, 0);                             // pivot at TOP edge
+  const lowerPivot = new THREE.Group(); lowerPivot.add(lower);
+  lowerPivot.position.y = 0;                                       // waistline y=0 world of tee
+
+  const upper = extrudeShape(torsoShape(1.34, .95, .12), mat);
+  upper.position.y = 0;                                            // sits from 0 up
+
+  const sL = extrudeShape(sleeveShape(), mat);
+  const sLp = new THREE.Group(); sLp.add(sL); sLp.position.set(-.67, .85, 0); sLp.rotation.z = Math.PI; // mirror
+  const sR = extrudeShape(sleeveShape(), mat);
+  const sRp = new THREE.Group(); sRp.add(sR); sRp.position.set(.67, .85, 0);
+
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(.21, .055, 8, 22, Math.PI),
+    new THREE.MeshStandardMaterial({ color: texture ? 0xffffff : color, map: RIB, roughness: .95 }));
+  collar.position.set(0, .95, .06); collar.rotation.z = Math.PI;
+
+  g.add(lowerPivot, upper, sLp, sRp, collar);
+
+  let printMesh = null;
+  if (print) {
+    printMesh = new THREE.Mesh(new THREE.PlaneGeometry(.72, .72),
+      new THREE.MeshStandardMaterial({ map: printTexture(print), transparent: true, roughness: .55 }));
+    printMesh.position.set(0, .42, .145); g.add(printMesh);
+  }
+  g.userData = { lowerPivot, sLp, sRp, printMesh };
+  return g;
+}
+
+/* ═══════════ clouds ═══════════ */
+function cloudSprite() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const x = cv.getContext('2d');
+  const g = x.createRadialGradient(64, 64, 8, 64, 64, 62);
+  g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(.6, 'rgba(255,252,246,.55)'); g.addColorStop(1, 'rgba(255,252,246,0)');
+  x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(cv);
+}
+const CLOUD_TEX = cloudSprite();
+const clouds = [];
+function puff(x, y, z, s) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: CLOUD_TEX, transparent: true, opacity: .9, depthWrite: false }));
+  sp.position.set(x, y, z); sp.scale.set(s, s * .62, 1);
+  sp.userData.d = Math.random() * 9;
+  scene.add(sp); clouds.push(sp);
+}
+for (let i = 0; i < 26; i++) puff((Math.random()-.5)*34, -4 + Math.random()*9, 4 - Math.random()*30, 7 + Math.random()*9);
+for (let i = 0; i < 26; i++) puff((Math.random()-.5)*46, -7 + Math.random()*10, -28 - Math.random()*80, 8 + Math.random()*10);
+for (let i = 0; i < 10; i++) puff((Math.random()-.5)*30, -6 + Math.random()*6, -104 - Math.random()*14, 9 + Math.random()*8);
+
+/* ═══════════ SCENE A · hero tee (macro start) at z=0 ═══════════ */
+const hero = makeTee({ color: 0xf3ede2, print: 'logo', rep: 6 });
+hero.scale.setScalar(4.4);
+hero.position.set(0, -2.2, 0);
+scene.add(hero);
+/* macro knit patch exactly where the camera starts (chest of hero) */
+const macro = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.2),
+  new THREE.MeshStandardMaterial({ color: 0xefe6d6, map: KNIT_MACRO, bumpMap: KNIT_MACRO, bumpScale: .09, roughness: .98 }));
+macro.material.map.repeat.set(1.6, 1.1); macro.material.bumpMap.repeat.set(1.6, 1.1);
+macro.material.transparent = true;
+macro.position.set(0, .55, .8);
+scene.add(macro);
+
+/* ═══════════ SCENE B · tee line at z≈-26 ═══════════ */
+const teeLine = new THREE.Group();
+const lineCols = [0x17171c, 0xf4f1ea, 0x5e1a24, 0x1e2a4a, 0x1f3d2b, 0xd8c9a3, 0x6d6d74];
+const linePrints = ['wing', 'logo', null, 'art', null, 'wing', 'logo'];
+lineCols.forEach((c, i) => {
+  const t = makeTee({ color: c, print: linePrints[i] });
+  const off = i - (lineCols.length - 1) / 2;
+  t.position.set(off * 2.5, -1 + Math.sin(i * 1.3) * .5, -26 - Math.abs(off) * 1.6);
+  t.rotation.y = -off * .18;
+  t.userData.floatSeed = i;
+  teeLine.add(t);
+});
+scene.add(teeLine);
+
+/* ═══════════ SCENE C · jersey squadron at z≈-46 ═══════════ */
+const squad = new THREE.Group();
+const kits = [
+  ['#2e6fd8', '#ffffff', '10'], ['#e8c020', '#1f7a38', '9'], ['#c0261e', '#ffffff', '7'],
+  ['#17171c', '#f0f0f0', '11'], ['#ffffff', '#2e6fd8', '8'], ['#5e1a24', '#e8c020', '4'],
+  ['#1f3d2b', '#ffffff', '5'], ['#5b2d8c', '#ffffff', '23'],
+];
+kits.forEach((k, i) => {
+  const tx = stripeNumberTexture(k[0], k[1], k[2]);
+  const j = makeTee({ texture: tx });
+  const row = i < 4 ? 0 : 1, col = (i % 4) - 1.5;
+  j.position.set(col * 3 + (row ? 1.4 : 0), -1.4 - row * 1.8, -46 - row * 4);
+  j.rotation.y = -col * .14;
+  j.userData.floatSeed = i * 2;
+  squad.add(j);
+});
+scene.add(squad);
+
+/* ═══════════ SCENE D · DTF press at z≈-70 (scroll-driven print) ═══════════ */
+const lab = new THREE.Group(); lab.position.set(0, -3.4, -70);
+const bench = new THREE.Mesh(new THREE.BoxGeometry(7.5, .5, 4.6),
+  new THREE.MeshStandardMaterial({ color: 0x2a2a32, roughness: .4, metalness: .35 }));
+bench.position.y = -.25; lab.add(bench);
+[[-3.4,-1.6,1.9],[3.4,-1.6,1.9],[-3.4,-1.6,-1.9],[3.4,-1.6,-1.9]].forEach(([x,y,z]) => {
+  const leg = new THREE.Mesh(new THREE.BoxGeometry(.28,2.4,.28), new THREE.MeshStandardMaterial({ color:0x1c1c22, metalness:.5, roughness:.4 }));
+  leg.position.set(x,y,z); lab.add(leg);
+});
+const flatTee = makeTee({ color: 0xf4f1ea });
+flatTee.rotation.x = -Math.PI / 2; flatTee.position.set(0, .06, .9); flatTee.scale.setScalar(1.25);
+lab.add(flatTee);
+/* the print that transfers (starts invisible) */
+const teePrint = new THREE.Mesh(new THREE.PlaneGeometry(.95, .95),
+  new THREE.MeshStandardMaterial({ map: printTexture('art'), transparent: true, opacity: 0, roughness: .55 }));
+teePrint.rotation.x = -Math.PI / 2; teePrint.position.set(0, .245, .35); lab.add(teePrint);
+/* DTF film (descends with scroll) */
+const film = new THREE.Group();
+const filmSheet = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5),
+  new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: .28, roughness: .12, side: THREE.DoubleSide }));
+filmSheet.rotation.x = -Math.PI / 2; film.add(filmSheet);
+const filmArt = new THREE.Mesh(new THREE.PlaneGeometry(.95, .95),
+  new THREE.MeshStandardMaterial({ map: printTexture('art'), transparent: true, side: THREE.DoubleSide }));
+filmArt.rotation.x = -Math.PI / 2; filmArt.position.y = .004; film.add(filmArt);
+film.position.set(0, 2.6, .35); lab.add(film);
+/* press head + arm */
+const pressArm = new THREE.Mesh(new THREE.BoxGeometry(.5, 3.4, .5),
+  new THREE.MeshStandardMaterial({ color: 0x3a3a44, metalness: .5, roughness: .35 }));
+pressArm.position.set(0, 1.7, -1.7); lab.add(pressArm);
+const pressHead = new THREE.Group();
+const plate = new THREE.Mesh(new THREE.BoxGeometry(2, .3, 2),
+  new THREE.MeshStandardMaterial({ color: 0xe8532a, roughness: .3, metalness: .3, emissive: 0xe8532a, emissiveIntensity: 0 }));
+pressHead.add(plate);
+const handle = new THREE.Mesh(new THREE.BoxGeometry(1.4, .14, .14),
+  new THREE.MeshStandardMaterial({ color: 0x17171c }));
+handle.position.set(0, .45, .8); pressHead.add(handle);
+pressHead.position.set(0, 3.4, .35); lab.add(pressHead);
+/* steam */
+const steam = [];
+for (let i = 0; i < 6; i++) {
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: CLOUD_TEX, transparent: true, opacity: 0, depthWrite: false }));
+  sp.scale.set(.9, .6, 1); sp.position.set((Math.random()-.5)*1.4, .6, .35 + (Math.random()-.5));
+  sp.userData.i = i; lab.add(sp); steam.push(sp);
+}
+scene.add(lab);
+
+/* ═══════════ SCENE E · fold & pack at z≈-92 ═══════════ */
+const packArea = new THREE.Group(); packArea.position.set(0, -3.4, -92);
+const table2 = new THREE.Mesh(new THREE.BoxGeometry(7, .4, 4.4),
+  new THREE.MeshStandardMaterial({ color: 0xc9b189, roughness: .8 }));
+table2.position.y = -.2; packArea.add(table2);
+const foldTee = makeTee({ color: 0xf4f1ea, print: 'art' });
+foldTee.rotation.x = -Math.PI / 2; foldTee.position.set(-1.6, .1, .2); foldTee.scale.setScalar(1.15);
+packArea.add(foldTee);
+/* kraft box with flaps */
+const kraft = new THREE.MeshStandardMaterial({ color: 0xb98d55, roughness: .9 });
+const boxG = new THREE.Group();
+boxG.add(new THREE.Mesh(new THREE.BoxGeometry(1.9, .1, 1.5), kraft));                    // base
+[[0,-.72,'z',1.9,.9,.1],[0,.72,'z',1.9,.9,.1],[-.95,0,'x',.1,.9,1.5],[.95,0,'x',.1,.9,1.5]].forEach(([px,pz,ax,w,h,d]) => {
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), kraft);
+  wall.position.set(px, .5, pz); boxG.add(wall);
+});
+const flapL = new THREE.Group(), flapR = new THREE.Group();
+const fL = new THREE.Mesh(new THREE.BoxGeometry(.95, .06, 1.5), kraft); fL.position.x = -.475; flapL.add(fL);
+const fR = new THREE.Mesh(new THREE.BoxGeometry(.95, .06, 1.5), kraft); fR.position.x = .475; flapR.add(fR);
+flapL.position.set(-.95, .95, 0); flapR.position.set(.95, .95, 0);
+flapL.rotation.z = -2.1; flapR.rotation.z = 2.1;
+boxG.add(flapL, flapR);
+/* label + tape */
+const lblCv = document.createElement('canvas'); lblCv.width = 256; lblCv.height = 128;
+const lx = lblCv.getContext('2d');
+lx.fillStyle = '#17171c'; lx.fillRect(0, 0, 256, 128);
+lx.fillStyle = '#ffd257'; lx.font = '900 44px Inter'; lx.textAlign = 'center'; lx.textBaseline = 'middle';
+lx.fillText('halfhata', 128, 64);
+const label = new THREE.Mesh(new THREE.PlaneGeometry(1, .5), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(lblCv) }));
+label.position.set(0, .5, .76); boxG.add(label);
+const tape = new THREE.Mesh(new THREE.BoxGeometry(.34, .07, 1.54),
+  new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: .5, transparent: true, opacity: 0 }));
+tape.position.y = 1; boxG.add(tape);
+boxG.position.set(1.7, .05, .2);
+packArea.add(boxG);
+scene.add(packArea);
+
+/* ═══════════ SCENE F · doorstep at z≈-110 ═══════════ */
+const door = new THREE.Group(); door.position.set(0, -4.2, -110);
+door.add(new THREE.Mesh(new THREE.CylinderGeometry(6, 6.4, .8, 30),
+  new THREE.MeshStandardMaterial({ color: 0xded4c4, roughness: .9 })));
+const porch = new THREE.Mesh(new THREE.BoxGeometry(3.4, .3, 2.4), new THREE.MeshStandardMaterial({ color: 0xb9a888, roughness: .85 }));
+porch.position.set(0, .55, 1.2); door.add(porch);
+const wall = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4, .4), new THREE.MeshStandardMaterial({ color: 0xf1e9db, roughness: .9 }));
+wall.position.set(0, 2.4, -.1); door.add(wall);
+const doorPanel = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.9, .12), new THREE.MeshStandardMaterial({ color: 0x274236, roughness: .6 }));
+doorPanel.position.set(0, 1.95, .14); door.add(doorPanel);
+const knob = new THREE.Mesh(new THREE.SphereGeometry(.07, 10, 10), new THREE.MeshStandardMaterial({ color: 0xd8b25c, metalness: .8, roughness: .25 }));
+knob.position.set(.55, 1.85, .24); door.add(knob);
+const mat2 = new THREE.Mesh(new THREE.BoxGeometry(1.5, .06, .9), new THREE.MeshStandardMaterial({ color: 0x8a4a2e, roughness: .95 }));
+mat2.position.set(0, .74, 1.1); door.add(mat2);
+const deliveredBox = boxG.clone();
+deliveredBox.scale.setScalar(.8);
+deliveredBox.position.set(.1, .78, 1.15); deliveredBox.rotation.y = .4;
+deliveredBox.traverse(o => {
+  if (o.material && o.material.transparent && o.material.opacity === 0) {
+    o.material = o.material.clone(); o.material.opacity = 1;
+  }
+});
+door.add(deliveredBox);
+scene.add(door);
+
+/* ═══════════ camera path — one unbroken flight ═══════════ */
+const path = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0, .55, 1.72),      // macro: .9 units from the knit patch
+  new THREE.Vector3(0, .8, 4.2),
+  new THREE.Vector3(-2.2, 1.4, 8.5),    // pull out, reveal hero tee
+  new THREE.Vector3(-5.5, .2, -6),
+  new THREE.Vector3(-2, -.4, -18),
+  new THREE.Vector3(0, -.6, -21.5),     // enter tee line
+  new THREE.Vector3(2.5, -.9, -31),
+  new THREE.Vector3(4.5, -1.6, -39),
+  new THREE.Vector3(0, -2, -41.5),      // jersey squadron
+  new THREE.Vector3(-4, -2.4, -50),
+  new THREE.Vector3(-3, -2.6, -58),
+  new THREE.Vector3(0, -1.4, -64.5),    // descend to the press
+  new THREE.Vector3(0, -1.9, -66.8),
+  new THREE.Vector3(1.8, -2.2, -69),    // orbit press slightly
+  new THREE.Vector3(-.6, -2, -74),
+  new THREE.Vector3(-1.4, -2.2, -84),   // to the pack table
+  new THREE.Vector3(0, -1.9, -88.6),
+  new THREE.Vector3(1.4, -2.1, -92),
+  new THREE.Vector3(.6, -2.4, -99),     // through clouds to the doorstep
+  new THREE.Vector3(0, -2.6, -104.5),
+  new THREE.Vector3(0, -2.8, -107.2),
+], false, 'catmullrom', .22);
+
+const looks = [
+  { t: 0.00, p: new THREE.Vector3(0, .55, .8) },      // straight at the knit
+  { t: 0.06, p: new THREE.Vector3(0, .5, .2) },
+  { t: 0.14, p: new THREE.Vector3(0, .6, 0) },        // whole hero tee
+  { t: 0.24, p: new THREE.Vector3(0, -.8, -26) },
+  { t: 0.36, p: new THREE.Vector3(0, -1.2, -27.5) },  // tee line
+  { t: 0.46, p: new THREE.Vector3(0, -2.2, -48) },    // jerseys
+  { t: 0.56, p: new THREE.Vector3(0, -2.6, -49) },
+  { t: 0.64, p: new THREE.Vector3(0, -3.1, -69.6) },  // press bed
+  { t: 0.74, p: new THREE.Vector3(0, -3.3, -69.6) },
+  { t: 0.82, p: new THREE.Vector3(.4, -3.2, -91.8) }, // fold table
+  { t: 0.90, p: new THREE.Vector3(.9, -3.2, -91.8) },
+  { t: 1.00, p: new THREE.Vector3(0, -2.6, -109) },   // the door
+];
+function lookAtFor(t) {
+  for (let i = 0; i < looks.length - 1; i++) {
+    const a = looks[i], b = looks[i + 1];
+    if (t >= a.t && t <= b.t) {
+      const k = (t - a.t) / (b.t - a.t), e = k * k * (3 - 2 * k);
+      return a.p.clone().lerp(b.p, e);
+    }
+  }
+  return looks[looks.length - 1].p;
+}
+const seg = (t, a, b) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k); };
+
+/* ═══════════ scrub loop ═══════════ */
+let target = 0, cur = 0;
+addEventListener('scroll', () => {
+  const max = document.body.scrollHeight - innerHeight;
+  target = max > 0 ? scrollY / max : 0;
+}, { passive: true });
+
+const caps = [0, .07, .27, .46, .63, .80, .95].map((t, i) => ({ t, el: document.getElementById('cap' + i) }));
+const hint = document.getElementById('hint');
+const bar = document.getElementById('progress');
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight, false);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+const clock = new THREE.Clock();
+function tick() {
+  const dt = clock.getDelta(), el = clock.elapsedTime;
+  cur += (target - cur) * Math.min(1, dt * 4.2);
+  const t = Math.min(.999, Math.max(0, cur));
+
+  camera.position.copy(path.getPointAt(t));
+  camera.position.y += Math.sin(el * 1.1) * .045;
+  camera.lookAt(lookAtFor(t));
+
+  /* ambient life (hero holds still for the macro shot, wakes on pull-out) */
+  const wake = seg(t, .09, .16);
+  hero.rotation.y = Math.sin(el * .3) * .12 * wake;
+  hero.position.y = -2.2 + Math.sin(el * .9) * .12 * wake;
+  macro.material.opacity = 1 - seg(t, .045, .105);
+  macro.visible = macro.material.opacity > .01;
+  teeLine.children.forEach(c => c.position.y += Math.sin(el * 1.2 + c.userData.floatSeed) * .0016);
+  squad.children.forEach(c => c.position.y += Math.sin(el * 1.1 + c.userData.floatSeed) * .0016);
+  clouds.forEach(c => { c.position.x += Math.sin(el * .12 + c.userData.d) * .003; });
+
+  /* ── DTF print sequence (scroll-scrubbed): film descends → press stamps → art transfers ── */
+  const k1 = seg(t, .60, .68);           // film descends onto tee
+  film.position.y = 2.6 - k1 * 2.32;
+  const k2 = seg(t, .68, .735);          // press comes down + heat
+  pressHead.position.y = 3.4 - k2 * 2.78;
+  plate.material.emissiveIntensity = k2 * .8;
+  labLight.position.set(0, -1.5, -69.5);
+  labLight.intensity = k2 * 2.2;
+  steam.forEach(sp => {
+    const live = k2 > .95 && t < .80;
+    const kk = ((el * .5 + sp.userData.i * .17) % 1);
+    sp.material.opacity = live ? .5 * (1 - kk) : 0;
+    sp.position.y = .6 + kk * 1.6;
+  });
+  const k3 = seg(t, .74, .79);           // press lifts, film peels, art stays
+  pressHead.position.y += k3 * 2.78;
+  film.position.y += k3 * 2.6;
+  filmArt.material.opacity = 1 - k3;
+  teePrint.material.opacity = Math.max(teePrint.material.opacity, k3);
+
+  /* ── folding sequence (scroll-scrubbed) ── */
+  const f1 = seg(t, .80, .845);          // sleeves fold in
+  foldTee.userData.sLp.rotation.y =  f1 * 2.6;
+  foldTee.userData.sRp.rotation.y = -f1 * 2.6;
+  const f2 = seg(t, .845, .885);         // hem folds up over chest
+  foldTee.userData.lowerPivot.rotation.x = f2 * Math.PI * .96;
+  if (foldTee.userData.printMesh) foldTee.userData.printMesh.material.opacity = 1 - f2 * .35;
+  const f3 = seg(t, .885, .925);         // slide into the box + settle
+  foldTee.position.x = -1.6 + f3 * 3.3;
+  foldTee.position.y = .1 + Math.sin(f3 * Math.PI) * 1.1 - f3 * .0;
+  foldTee.scale.setScalar(1.15 - f3 * .45);
+  const f4 = seg(t, .925, .955);         // flaps close + tape
+  flapL.rotation.z = -2.1 + f4 * 2.1;
+  flapR.rotation.z =  2.1 - f4 * 2.1;
+  tape.material.opacity = seg(t, .95, .965);
+
+  /* captions + chrome */
+  let active = 0;
+  caps.forEach((c, i) => { if (t >= c.t - .04) active = i; });
+  caps.forEach((c, i) => c.el.classList.toggle('on', i === active));
+  hint.style.opacity = t > .02 ? 0 : .95;
+  bar.style.width = (t * 100) + '%';
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+setTimeout(() => document.getElementById('loader').classList.add('gone'), 500);
+</script>
+</body>
+</html>
