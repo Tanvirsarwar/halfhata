@@ -702,3 +702,17 @@ img.pimg{cursor:zoom-in}
 .card .body{padding:16px}
 .card .name{font-size:14.5px}
 .card .price{color:var(--brass-2);font-size:16px}
+
+/* ═══ MOBILE HERO FIX: full banner always visible, text below ═══ */
+@media(max-width:820px){
+  .hslider{background:#17120c}
+  .hslide{background-size:contain !important;background-position:top center !important;background-repeat:no-repeat;background-color:#17120c}
+  .hslide[style*="gradient"]{background-size:cover !important}   /* gradient slides still fill */
+  .hslide .shade{display:none}
+  .hslide .container{min-height:0;align-items:flex-start}
+  .hs-content{margin:calc(56.25vw + 14px) auto 0;padding:0 0 78px;max-width:100%;text-align:center;text-shadow:none}
+  .hs-content .hk{color:var(--gold)}
+  .hs-content h1{font-size:clamp(26px,7.5vw,34px)}
+  .hs-content p{color:#e9e2d2;font-size:14.5px}
+  .hs-nav{bottom:18px}
+}
